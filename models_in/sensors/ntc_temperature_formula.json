@@ -103,7 +103,7 @@
       { "tempMin": -40.0, "tempMax":   105.0, "maxError": 0.60, "unit": "\\degreeCelsius", "description": "Maximum calibration error from -40 °C to 0 °C" }
     ],
 
-    "evaluationFormula": "sqrt(uB**2 + (resolution/sqrt(12))**2 + (absUncertainty * abs(d_in-32768)/32768 / sqrt(3))**2)",
+    "evaluationFormula": "10*sqrt(uB**2 + (resolution/sqrt(12))**2 + (absUncertainty * abs(d_in-32768)/32768 / sqrt(3))**2)",
 
     "requiredInputs": ["uB", "resolution", "absUncertainty"],
 

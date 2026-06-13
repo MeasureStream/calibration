@@ -304,16 +304,16 @@ def save_charts(
 
     # --- fig1: post-calibration residuals with U(E) bars ---
     fig1, ax1 = plt.subplots(figsize=(9, 5))
-    ax1.set_title(f"Check A/B \u2014 Residui post-calibrazione vs U(E)\n(variante: {variant})", fontsize=11)
+    ax1.set_title(f"Check A/B \u2014 Post-calibration residuals vs U(E)", fontsize=11)
     for i, p in enumerate(punti):
         ax1.fill_between([p - 0.35, p + 0.35], [-u_exp[i], -u_exp[i]], [u_exp[i], u_exp[i]],
-                         color="green", alpha=0.15, label="Banda U(E)" if i == 0 else "")
+                         color="green", alpha=0.15, label="U(E) band" if i == 0 else "")
     ax1.axhline(0, color="black", linestyle="-", linewidth=0.7, alpha=0.5)
     ax1.errorbar(punti, me_post, yerr=u_exp, fmt="o", color="royalblue", ecolor="royalblue",
                  capsize=7, linewidth=1.5, markersize=6, label="|M_e_post| +/- U(E)")
     ax1.set_xticks(punti)
     ax1.set_xticklabels([f"P{p}\n({t_ref[i]:.2f} {unit_symbol})" for i, p in enumerate(punti)])
-    ax1.set_xlabel("Punto di calibrazione")
+    ax1.set_xlabel("Calibration point")
     ax1.set_ylabel(f"Error M_e_post  [{unit_symbol}]")
     ax1.legend(loc="upper right", fontsize=9)
     ax1.grid(True, alpha=0.3)
@@ -322,13 +322,13 @@ def save_charts(
                      textcoords="offset points", ha="center", fontsize=8, color="royalblue")
     plt.tight_layout()
     p1 = output_dir / f"{prefix}_fig1_residuals.png"
-    fig1.savefig(p1, dpi=150, bbox_inches="tight")
+    fig1.savefig(p1, dpi=75, bbox_inches="tight")
     plt.close(fig1)
     saved.append(p1)
 
     # --- fig2: as-found errors with sensorAccuracy limits (Check G visual) ---
     fig2, ax2 = plt.subplots(figsize=(9, 5))
-    ax2.set_title(f"Check G \u2014 Errori as-found (pre-calibrazione) vs limiti sensorAccuracy\n(variante: {variant})", fontsize=11)
+    ax2.set_title(f"Check G \u2014 As-found errors (pre-calibration) vs tolerance", fontsize=11)
 
     x_pos = np.arange(len(punti))
     width = 0.40
@@ -344,12 +344,12 @@ def save_charts(
                 ax2.plot([x_pos[i] - width/2 - 0.05, x_pos[i] + width/2 + 0.05],
                          [-max_err, -max_err], color="red", linewidth=2.0, linestyle="--")
 
-        ax2.plot([], [], color="red", linewidth=2.0, linestyle="--", label="tolerance \u00b1maxError")
+        ax2.plot([], [], color="red", linewidth=2.0, linestyle="--", label="tolerance")
 
     ax2.axhline(0, color="black", linestyle="-", linewidth=0.7, alpha=0.5)
     ax2.set_xticks(x_pos)
     ax2.set_xticklabels([f"P{p}\n({t_ref[i]:.2f} {unit_symbol})" for i, p in enumerate(punti)], fontsize=8)
-    ax2.set_xlabel("Punto di calibrazione")
+    ax2.set_xlabel("Calibration point")
     ax2.set_ylabel(f"Error as-found M_e_pre  [{unit_symbol}]")
 
     if len(me_pre) > 0:
@@ -372,7 +372,7 @@ def save_charts(
 
     plt.tight_layout()
     p2 = output_dir / f"{prefix}_fig2_asfound.png"
-    fig2.savefig(p2, dpi=150, bbox_inches="tight")
+    fig2.savefig(p2, dpi=75, bbox_inches="tight")
     plt.close(fig2)
     saved.append(p2)
 

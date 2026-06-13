@@ -108,8 +108,8 @@ def load_input_data(path: Path) -> Dict[str, Any]:
             if k in calib_result:
                 data["_coeffs"][k] = calib_result[k]
         # Physical unit DSI for XML unit elements — read from sensor JSON via orchestrator.
-        # Default: "\\degreecelsius" (PTB DCC lowercase convention).
-        data["_phys_unit_dsi"] = calib_result.get("_phys_unit_dsi", "\\degreecelsius")
+        # Default: "\\degreeCelsius" (D-SI case-sensitive).
+        data["_phys_unit_dsi"] = calib_result.get("_phys_unit_dsi", "\\degreeCelsius")
     else:
         data = raw
 
@@ -185,8 +185,8 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
 
     # Physical unit for all temperature quantity elements in the XML.
     # Read from the calibration result (set by the orchestrator from sensor JSON).
-    # Fallback: "\\degreecelsius" (PTB DCC lowercase DSI convention).
-    phys_unit_dsi: str = data.get("_phys_unit_dsi", "\\degreecelsius")
+    # Fallback: "\\degreeCelsius" (D-SI case-sensitive).
+    phys_unit_dsi: str = data.get("_phys_unit_dsi", "\\degreeCelsius")
 
     # Row format (funzione, temperature domain):
     #   [point, T_ref, T_c_post, M_e_pre, M_e_post, U_exp]  (unit = phys_unit_dsi)
@@ -465,7 +465,7 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
     _text(temp_min_k, "{https://ptb.de/si}unit", "\\kelvin")
     temp_min_c = ET.SubElement(temp_min_hybrid, "{https://ptb.de/si}real")
     _text(temp_min_c, "{https://ptb.de/si}value", f"{temp_center - temp_tol:.2f}")
-    _text(temp_min_c, "{https://ptb.de/si}unit", "\\degreecelsius")
+    _text(temp_min_c, "{https://ptb.de/si}unit", "\\degreeCelsius")
 
     temp_max_q = ET.SubElement(
         temp_data, "{https://ptb.de/dcc}quantity", {"refType": "basic_temperatureMax"}
@@ -480,7 +480,7 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
     _text(temp_max_k, "{https://ptb.de/si}unit", "\\kelvin")
     temp_max_c = ET.SubElement(temp_max_hybrid, "{https://ptb.de/si}real")
     _text(temp_max_c, "{https://ptb.de/si}value", f"{temp_center + temp_tol:.2f}")
-    _text(temp_max_c, "{https://ptb.de/si}unit", "\\degreecelsius")
+    _text(temp_max_c, "{https://ptb.de/si}unit", "\\degreeCelsius")
 
     rh_condition = ET.SubElement(
         influence_conditions,

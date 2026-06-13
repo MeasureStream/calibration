@@ -341,12 +341,16 @@ def calibrate(
     expanded_uncertainties: List[float] = []
     per_step_u_budget_raw: List[Tuple] = []
 
+
     for i, t in enumerate(temp_nominali):
         uA_ref    = risultati_elaborati[t]["pstd_ref"]            # u_y type-A
         uA_sensor = risultati_elaborati[t]["pstd_sensor"] * sens  # u_x type-A × sens
+        #questo no
         uB_sensor = _ub_arr[i] * sens                             # u_x type-B × sens
         u_ref     = np.sqrt(uA_ref**2 + ub_ref_y**2)
+        #questo no (ma se usassi rmse)
         u_sensor  = np.sqrt(uA_sensor**2 + uB_sensor**2 + u_res**2)
+        #incertezza dell errore
         u_c       = np.sqrt(u_ref**2 + u_sensor**2)
         U_exp     = 2.0 * u_c
         expanded_uncertainties.append(float(U_exp))
