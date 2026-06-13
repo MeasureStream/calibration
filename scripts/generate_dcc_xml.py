@@ -104,6 +104,8 @@ def load_input_data(path: Path) -> Dict[str, Any]:
         data["_calib_model"] = calib_result.get("_calib_model", "linear")
         data["_ref_instrument"] = calib_result.get("_ref_instrument", {})
         data["_conformity"] = calib_result.get("_conformity", {})
+        data["_sensor_schema_version"] = calib_result.get("_sensor_schema_version", "")
+        data["_ref_schema_version"] = calib_result.get("_ref_schema_version", "")
         # Calibration coefficients for the method statement
         data["_coeffs"] = {}
         for k in ("_A", "_B", "_a0", "_a1", "_a2", "_a3"):
@@ -233,6 +235,20 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
     software_name = ET.SubElement(software, "{https://ptb.de/dcc}name")
     _lang_text(software_name, "generate_dcc_xml.py", "en")
     _text(software, "{https://ptb.de/dcc}release", "1.0")
+
+    sensor_schema = data.get("_sensor_schema_version", "")
+    if sensor_schema:
+        sw_sensor = ET.SubElement(dcc_software, "{https://ptb.de/dcc}software")
+        sw_sensor_name = ET.SubElement(sw_sensor, "{https://ptb.de/dcc}name")
+        _lang_text(sw_sensor_name, "Sensor model schema", "en")
+        _text(sw_sensor, "{https://ptb.de/dcc}release", sensor_schema)
+
+    ref_schema = data.get("_ref_schema_version", "")
+    if ref_schema:
+        sw_ref = ET.SubElement(dcc_software, "{https://ptb.de/dcc}software")
+        sw_ref_name = ET.SubElement(sw_ref, "{https://ptb.de/dcc}name")
+        _lang_text(sw_ref_name, "Reference model schema", "en")
+        _text(sw_ref, "{https://ptb.de/dcc}release", ref_schema)
 
     core = ET.SubElement(admin, "{https://ptb.de/dcc}coreData")
     _text(core, "{https://ptb.de/dcc}countryCodeISO3166_1", "IT")

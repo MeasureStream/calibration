@@ -471,6 +471,9 @@ def _build_cert_filled(
             "issuedBy": ref_json.get("issuedBy", ""),
         }
 
+    cal_result_entry["_sensor_schema_version"] = sensor_json.get("schemaVersion", "")
+    cal_result_entry["_ref_schema_version"] = (ref_json or {}).get("schemaVersion", "")
+
     out["_calibration_result"] = cal_result_entry
     return out
 
@@ -600,6 +603,9 @@ def main() -> None:
     parser.add_argument("--check-units",   action=argparse.BooleanOptionalAction, default=False,
         help="(deprecated — unit checks now run automatically when model JSONs are provided)")
     parser.add_argument("--convert-units", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--ufit", type=float, default=None,
+        help="Calibration fitting uncertainty (overrides sensor JSON ufit). "
+             "Use rmse_pre from previous calibration for honest uncertainty propagation.")
     parser.add_argument(
         "--charts-interactive", action="store_true", default=False,
         help="Show charts interactively via matplotlib (blocks until all windows are closed). "
