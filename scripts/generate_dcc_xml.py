@@ -102,6 +102,7 @@ def load_input_data(path: Path) -> Dict[str, Any]:
         data["_u_budget_per_step"] = calib_result.get("_u_budget_per_step", [])
         data["_rmse"] = calib_result.get("_rmse", 0.0)
         data["_calib_model"] = calib_result.get("_calib_model", "linear")
+        data["_ref_instrument"] = calib_result.get("_ref_instrument", {})
         # Calibration coefficients for the method statement
         data["_coeffs"] = {}
         for k in ("_A", "_B", "_a0", "_a1", "_a2", "_a3"):
@@ -314,6 +315,43 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
     )
     lab_name = ET.SubElement(lab_ident, "{https://ptb.de/dcc}name")
     _lang_text(lab_name, "Laboratory reference", "en")
+
+    ref_instr = data.get("_ref_instrument", {})
+    if ref_instr.get("modelName") or ref_instr.get("calibrationCertificateID"):
+        ref_item = ET.SubElement(items, "{https://ptb.de/dcc}item")
+        ref_item_name = ET.SubElement(ref_item, "{https://ptb.de/dcc}name")
+        _safe_lang_text(
+            ref_item_name,
+            ref_instr.get("modelName", ""),
+            "Reference instrument",
+            "en",
+        )
+        if ref_instr.get("manufacturer"):
+            ref_man = ET.SubElement(ref_item, "{https://ptb.de/dcc}manufacturer")
+            ref_man_name = ET.SubElement(ref_man, "{https://ptb.de/dcc}name")
+            _safe_lang_text(
+                ref_man_name,
+                ref_instr.get("manufacturer", ""),
+                "Unknown manufacturer",
+                "en",
+            )
+        if ref_instr.get("mpn"):
+            _text(ref_item, "{https://ptb.de/dcc}model", ref_instr["mpn"])
+        if ref_instr.get("calibrationCertificateID"):
+            ref_idents = ET.SubElement(ref_item, "{https://ptb.de/dcc}identifications")
+            cert_ident = ET.SubElement(ref_idents, "{https://ptb.de/dcc}identification")
+            _text(
+                cert_ident,
+                "{https://ptb.de/dcc}issuer",
+                ref_instr.get("issuedBy", "N/A"),
+            )
+            _text(
+                cert_ident,
+                "{https://ptb.de/dcc}value",
+                ref_instr["calibrationCertificateID"],
+            )
+            cert_name = ET.SubElement(cert_ident, "{https://ptb.de/dcc}name")
+            _lang_text(cert_name, "Calibration certificate", "en")
 
     cal_lab = ET.SubElement(admin, "{https://ptb.de/dcc}calibrationLaboratory")
     contact = ET.SubElement(cal_lab, "{https://ptb.de/dcc}contact")
