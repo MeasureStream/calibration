@@ -103,6 +103,7 @@ def load_input_data(path: Path) -> Dict[str, Any]:
         data["_rmse"] = calib_result.get("_rmse", 0.0)
         data["_calib_model"] = calib_result.get("_calib_model", "linear")
         data["_ref_instrument"] = calib_result.get("_ref_instrument", {})
+        data["_conformity"] = calib_result.get("_conformity", {})
         # Calibration coefficients for the method statement
         data["_coeffs"] = {}
         for k in ("_A", "_B", "_a0", "_a1", "_a2", "_a3"):
@@ -437,6 +438,49 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
     reg_statement = ET.SubElement(statements, "{https://ptb.de/dcc}statement")
     reg_decl = ET.SubElement(reg_statement, "{https://ptb.de/dcc}declaration")
     _lang_text(reg_decl, reg_text, "en")
+
+    conf = data.get("_conformity", {})
+    if conf:
+        conf_summary = conf.get("summary", {})
+        conf_overall = conf_summary.get("overall", "NON CONFORME")
+        conf_guard = conf.get("guard_band")
+
+        dr_text = (
+            f"Decision rule: acceptance when "
+            f"G={conf_summary.get('G','?')} A={conf_summary.get('A','?')} "
+            f"B={conf_summary.get('B','?')} H={conf_summary.get('H','?')}. "
+            f"Verdict: {conf_overall}."
+        )
+        dr_statement = ET.SubElement(statements, "{https://ptb.de/dcc}statement")
+        dr_decl = ET.SubElement(dr_statement, "{https://ptb.de/dcc}declaration")
+        _lang_text(dr_decl, dr_text, "en")
+
+        if conf_guard is not None:
+            gb_text = f"Guard band (maxTollerance): {conf_guard}."
+            gb_statement = ET.SubElement(statements, "{https://ptb.de/dcc}statement")
+            gb_decl = ET.SubElement(gb_statement, "{https://ptb.de/dcc}declaration")
+            _lang_text(gb_decl, gb_text, "en")
+
+        rH_list = conf.get("check_H", [])
+        if rH_list:
+            pfa_parts = []
+            for r in rH_list:
+                if isinstance(r, dict):
+                    pfa_parts.append(
+                        f"P{r.get('punto','?')}={r.get('PFA_pct',0):.1f}%"
+                    )
+            if pfa_parts:
+                h_params = conf.get("check_H_params", {})
+                pfa_text = (
+                    f"PFA (Probability of False Acceptance) per point: "
+                    + " ".join(pfa_parts)
+                    + f". MAE={h_params.get('mae_y','?')}, "
+                    f"threshold={h_params.get('pfa_threshold_pct','?')}%, "
+                    f"mode={h_params.get('u_std_mode','combined')}."
+                )
+                pfa_statement = ET.SubElement(statements, "{https://ptb.de/dcc}statement")
+                pfa_decl = ET.SubElement(pfa_statement, "{https://ptb.de/dcc}declaration")
+                _lang_text(pfa_decl, pfa_text, "en")
 
     meas_results = ET.SubElement(root, "{https://ptb.de/dcc}measurementResults")
     meas_result = ET.SubElement(meas_results, "{https://ptb.de/dcc}measurementResult")
