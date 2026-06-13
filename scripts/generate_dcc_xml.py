@@ -442,7 +442,7 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
     conf = data.get("_conformity", {})
     if conf:
         conf_summary = conf.get("summary", {})
-        conf_overall = conf_summary.get("overall", "NON CONFORME")
+        conf_overall = conf_summary.get("overall", "NON-COMPLIANT")
         conf_guard = conf.get("guard_band")
 
         dr_text = (

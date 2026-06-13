@@ -128,6 +128,104 @@ def _validate_output_domain(
             break
 
 
+def _build_last_calib_json(
+    calib_result: Dict[str, Any],
+    cert_filled: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Build a comprehensive JSON with all calibration results for downstream consumers."""
+    import datetime as _dt
+
+    calib_model = calib_result.get("model", "linear")
+    measurements = (
+        cert_filled.get("template_parts", {})
+        .get("calculated_calibration_values", {})
+        .get("_measurements", [])
+    )
+    calib_cr = cert_filled.get("_calibration_result", {})
+
+    out: Dict[str, Any] = {
+        "model": calib_model,
+        "timestamp": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+        "lsb_per_y": calib_result.get("lsb_per_y"),
+        "fit_quality": {
+            "rmse": calib_result.get("rmse"),
+            "u_fitting": calib_result.get("u_fitting"),
+            "rmse_pre": calib_cr.get("_rmse_pre"),
+        },
+        "reference": {
+            "ub_ref_y": calib_result.get("ub_ref_y"),
+        },
+        "sensor": {
+            "ub_sensor_lsb": calib_result.get("ub_sensor_lsb"),
+            "ub_sensor_lsb_per_step": calib_result.get("ub_sensor_lsb_per_step"),
+        },
+        "expanded_uncertainties": calib_result.get("expanded_uncertainties"),
+        "temp_nominali": calib_result.get("temp_nominali"),
+        "ref_temp_means": calib_result.get("ref_temp_means"),
+    }
+
+    if calib_model == "linear":
+        out["coefficients"] = {
+            "A":    calib_result.get("A"),
+            "B":    calib_result.get("B"),
+            "u_A":  calib_result.get("u_A"),
+            "u_B":  calib_result.get("u_B"),
+            "cov_AB": calib_result.get("cov_AB"),
+        }
+        out["old_coefficients"] = {
+            "A": calib_result.get("old_A"),
+            "B": calib_result.get("old_B"),
+        }
+        budget = calib_result.get("u_budget_per_step", [])
+    elif calib_model == "cubic":
+        out["coefficients"] = {
+            "a0": calib_result.get("a0"), "a1": calib_result.get("a1"),
+            "a2": calib_result.get("a2"), "a3": calib_result.get("a3"),
+            "u_a0": calib_result.get("u_a0"), "u_a1": calib_result.get("u_a1"),
+            "u_a2": calib_result.get("u_a2"), "u_a3": calib_result.get("u_a3"),
+            "cov_theta": calib_result.get("cov_theta"),
+        }
+        out["old_coefficients"] = {
+            "a0": calib_result.get("old_a0"), "a1": calib_result.get("old_a1"),
+            "a2": calib_result.get("old_a2"), "a3": calib_result.get("old_a3"),
+        }
+        budget = calib_result.get("per_step_budget", [])
+    else:
+        budget = []
+
+    # Per-step calibration points with uncertainties
+    calibration_points = []
+    for i, (t_nom, ref_t) in enumerate(zip(
+        calib_result.get("temp_nominali", []),
+        calib_result.get("ref_temp_means", []),
+    )):
+        point: Dict[str, Any] = {
+            "point": i + 1,
+            "t_nominal": t_nom,
+            "T_ref": ref_t,
+        }
+        if i < len(measurements):
+            m = measurements[i]
+            point.update({
+                "T_sensor_post": m[2],
+                "M_e_pre":       m[3],
+                "M_e_post":      m[4],
+                "U_exp":         m[5],
+            })
+        if i < len(calib_result.get("expanded_uncertainties", [])):
+            point["U_exp"] = calib_result["expanded_uncertainties"][i]
+        if i < len(budget):
+            b = budget[i]
+            for key in ("uA_ref", "uA_sensor", "ub_uso", "u_fitting",
+                        "u_ref", "u_sensor", "u_c"):
+                if key in b:
+                    point[key] = b[key]
+        calibration_points.append(point)
+
+    out["calibration_points"] = calibration_points
+    return out
+
+
 def _build_cert_filled(
     cert_input: Dict[str, Any],
     sensor_json: Dict[str, Any],
@@ -480,6 +578,8 @@ def main() -> None:
     parser.add_argument("--cert-output", type=Path, default=default_cert_output)
     parser.add_argument("--pdf",  type=str, default=default_pdf_output)
     parser.add_argument("--xml",  type=Path, default=default_xml_output)
+    parser.add_argument("--last-calibration", type=Path, default=default_last_calib,
+        help="Write full calibration result JSON (coefficients, uncertainties, per-step budget, measurements) for downstream consumers")
     parser.add_argument("--conformity-output", type=Path, default=None)
     parser.add_argument("--images-dir", type=Path, default=None,
         help="Override base directory for plot images (replaces IMAGES_CALIB_DIR/IMAGES_CONFORM_DIR). "
@@ -802,6 +902,17 @@ def main() -> None:
     # ── R18: output boundary validation — verify measurements are in physical units, not LSB ──
     _validate_output_domain(cert_filled, sensor_json, _cert_unit_sym)
 
+    # ── R18: write full calibration result for downstream consumers ──
+    if args.last_calibration is not None:
+        last_calib_json = _build_last_calib_json(calib_result, cert_filled)
+        args.last_calibration.parent.mkdir(parents=True, exist_ok=True)
+        args.last_calibration.write_text(
+            json.dumps(last_calib_json, indent=2, ensure_ascii=False, default=str),
+            encoding="utf-8",
+        )
+        if args.verbose:
+            print(f"Last calibration JSON written to: {args.last_calibration}")
+
     if calibration_skipped:
         _apply_calibration_skipped(cert_filled, calib_result, old_A, old_B, old_C, old_D, lsb_per_y)
 
@@ -822,21 +933,21 @@ def main() -> None:
         print(f"Certificate JSON written to: {args.cert_output}")
 
     try:
-        import checks_helper as _conformita
+        import checks_helper as _checks
 
         filled_data = json.loads(args.cert_output.read_text(encoding="utf-8"))
-        calib_cr      = _conformita.extract_calib(filled_data)
-        measurements  = _conformita.extract_measurements(filled_data)
+        calib_cr      = _checks.extract_calib(filled_data)
+        measurements  = _checks.extract_measurements(filled_data)
 
         limit_y    = _get_abs_uncertainty(sensor_json)
         conf_model    = calib_cr.get("_calib_model", "linear")
 
-        sG, rG = _conformita.check_G(measurements, max_tollerance, conf_model, verbose=False)
-        sA, rA = _conformita.check_A(measurements, verbose=False)
-        sB, rB = _conformita.check_B(measurements, limit_y, verbose=False)
+        sG, rG = _checks.check_G(measurements, max_tollerance, conf_model, verbose=False)
+        sA, rA = _checks.check_A(measurements, verbose=False)
+        sB, rB = _checks.check_B(measurements, limit_y, verbose=False)
 
         u_budget_conf = calib_cr.get("_u_budget_per_step", [])
-        sH, rH = _conformita.check_H(
+        sH, rH = _checks.check_H(
             measurements, mae_y=args.mae_y,
             pfa_threshold_pct=args.pfa_threshold_pct,
             verbose=False, u_std_mode=args.pfa_u_std_mode,
@@ -849,9 +960,9 @@ def main() -> None:
             "G": sG, "A": sA, "B": sB, "H": sH,
             "calibration_done": calib_result.get("calibration_done", "done"),
             "overall": (
-                "CONFORME"
+                "COMPLIANT"
                 if all(s == "PASS" for s in [sG, sA, sB, sH])
-                else "NON CONFORME"
+                else "NON-COMPLIANT"
             ),
         }
 
@@ -869,7 +980,7 @@ def main() -> None:
                 )
             print(
                 f"  [H] MAE={args.mae_y:.3f}{_unit_sym}  "
-                f"soglia={args.pfa_threshold_pct:.0f}%  "
+                f"threshold={args.pfa_threshold_pct:.0f}%  "
                 f"u_std_mode={args.pfa_u_std_mode}"
             )
 
