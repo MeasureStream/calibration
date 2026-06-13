@@ -210,10 +210,9 @@ def run_prechecks(
     payload: Dict[str, Any],
     sensor_json: Dict[str, Any] | None = None,
     ref_json: Dict[str, Any] | None = None,
-    check_units: bool = False,
     verbose: bool = False,
 ) -> Dict[str, Any]:
-    # pre-checks: >= 2 steps, optional pint-based unit check
+    # pre-checks: >= 2 steps, mandatory pint-based unit check when model JSONs provided
     result: Dict[str, Any] = {
         "ok": True,
         "steps_ok": False,
@@ -231,7 +230,7 @@ def run_prechecks(
         result["errors"].append(msg)
         result["ok"] = False
 
-    if check_units and sensor_json is not None and ref_json is not None:
+    if sensor_json is not None and ref_json is not None:
         from .unit_checks import check_dsi
         uc = check_dsi(sensor_json, ref_json, "linear")
         result["unit_check"] = uc
@@ -258,7 +257,6 @@ def calibrate(
     old_b: float | None = None,
     sensor_json: Dict[str, Any] | None = None,
     ref_json: Dict[str, Any] | None = None,
-    check_units: bool = False,
     convert_units: bool = False,
     unit_symbol: str = "°C",
     formula: str | None = None,
@@ -269,7 +267,7 @@ def calibrate(
     if ub_ref_y is None:
         raise ValueError("calibrate() requires ub_ref_y")
 
-    pre = run_prechecks(payload, sensor_json, ref_json, check_units, verbose)
+    pre = run_prechecks(payload, sensor_json, ref_json, verbose)
     unit_check_result = pre["unit_check"]
     if not pre["ok"]:
         raise ValueError("\n".join(pre["errors"]))
@@ -291,12 +289,12 @@ def calibrate(
     # Per-step ub_sensor_lsb via formula evaluation or single fixed value
     _ub_arr: np.ndarray
     if formula and formula_vars:
-        from evaluation_formula import evaluate_formula
+        from evaluation_formula import evaluate_formula, qs
         _ub_per_step = []
         for i, t in enumerate(temp_nominali):
             D_i = float(x[i])
-            _vars_i = {**formula_vars, "d_in": D_i}
-            _ub_per_step.append(evaluate_formula(formula, _vars_i))
+            _vars_i = {**formula_vars, "d_in": qs(D_i)}
+            _ub_per_step.append(float(evaluate_formula(formula, _vars_i).magnitude))
         _ub_arr = np.array(_ub_per_step, dtype=float)
         if verbose:
             _ub_mean = float(np.mean(_ub_arr))

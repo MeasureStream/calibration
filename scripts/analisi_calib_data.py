@@ -324,7 +324,7 @@ def _build_cert_filled(
 def _run_calibration(procedure: str, payload: Dict, lsb_scale: Dict, sample_size: int,
                      adc_max: float, ub_ref_lsb: float, ub_sensor_lsb: float, verbose: bool,
                      risol: float, old_A, old_B, old_C, old_D,
-                     sensor_json, ref_json, check_units: bool, convert_units: bool,
+                     sensor_json, ref_json, convert_units: bool,
                      unit_symbol: str = "°C",
                      formula: str | None = None,
                      formula_vars: Dict[str, float] | None = None,
@@ -333,7 +333,7 @@ def _run_calibration(procedure: str, payload: Dict, lsb_scale: Dict, sample_size
     ub_ref_y = ub_ref_lsb   # caller passes reference uncertainty in Y
     unit_kwargs = dict(
         sensor_json=sensor_json, ref_json=ref_json,
-        check_units=check_units, convert_units=convert_units,
+        convert_units=convert_units,
         unit_symbol=unit_symbol,
     )
     formula_kwargs = dict(formula=formula, formula_vars=formula_vars)
@@ -440,7 +440,6 @@ def main() -> None:
         choices=["none", "always", "if-out-of-tolerance"],
         help="Parameter update strategy: none (do not adjust), always (adjust regardless), if-out-of-tolerance (adjust only when as-found errors exceed limits)",
     )
-    parser.add_argument("--check-units",   action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--convert-units", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument(
         "--charts-interactive", action="store_true", default=False,
@@ -615,7 +614,7 @@ def main() -> None:
             verbose=args.verbose, risol=float(_lookup(sensor_reading_uncertainty, "varName", "resolution", {}).get("value", 1)) / lsb_per_y,
             old_A=old_A, old_B=old_B, old_C=old_C, old_D=old_D,
             sensor_json=sensor_json, ref_json=ref_json,
-            check_units=args.check_units, convert_units=args.convert_units,
+            convert_units=args.convert_units,
             unit_symbol=_unit_sym,
             formula=_formula_str, formula_vars=_formula_vars,
             ufit=ufit,
