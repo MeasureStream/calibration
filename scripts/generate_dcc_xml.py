@@ -366,6 +366,10 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
     rmse = data.get("_rmse", 0.0)
     coeffs = data.get("_coeffs", {})
 
+    # Extract coverage factor from budget or default to 2.0
+    u_budget_dcc: List[Dict[str, Any]] = data.get("_u_budget_per_step", [])
+    _k_coverage = float(u_budget_dcc[0].get("k", 2.0)) if u_budget_dcc else 2.0
+
     if calib_model == "cubic":
         _a0 = coeffs.get("_a0", 0)
         _a1 = coeffs.get("_a1", 0)
@@ -384,7 +388,7 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
             f"Coefficients: A={_A:.6e}, B={_B:.6e}."
         )
     reg_text = (
-        f"Regression uncertainty (expanded, k=2): u_reg = {2.0 * rmse:.2e}. "
+        f"Regression uncertainty (expanded, k={_k_coverage:.1f}): u_reg = {_k_coverage * rmse:.2e}. "
         f"RMSE = {rmse:.2e}."
     )
 
@@ -597,7 +601,7 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
     _text(
         expanded_unc,
         "{https://ptb.de/si}coverageFactorXMLList",
-        " ".join(["2.0"] * len(uncertainties)),
+        " ".join([str(_k_coverage)] * len(uncertainties)),
     )
     _text(
         expanded_unc,
@@ -677,8 +681,8 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
     _text(rmse_real, "{https://ptb.de/si}value", f"{_rmse_val:.6e}")
     _text(rmse_real, "{https://ptb.de/si}unit", phys_unit_dsi)
     rmse_exp = ET.SubElement(rmse_real, "{https://ptb.de/si}expandedUnc")
-    _text(rmse_exp, "{https://ptb.de/si}uncertainty", f"{2.0 * _rmse_val:.6e}")
-    _text(rmse_exp, "{https://ptb.de/si}coverageFactor", "2.0")
+    _text(rmse_exp, "{https://ptb.de/si}uncertainty", f"{_k_coverage * _rmse_val:.6e}")
+    _text(rmse_exp, "{https://ptb.de/si}coverageFactor", str(_k_coverage))
     _text(rmse_exp, "{https://ptb.de/si}coverageProbability", "0.95")
 
     measurement_metadata = ET.SubElement(
