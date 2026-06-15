@@ -23,6 +23,7 @@ _ALLOWED_FUNCTIONS = frozenset({
 })
 
 # AST node types BLOCKED (everything else is allowed; Call nodes further restricted by _ALLOWED_FUNCTIONS)
+# ast.TypeAlias is only available in Python 3.12+, so we add it conditionally
 _BLOCKED_NODES = frozenset({
     ast.Import, ast.ImportFrom,
     ast.Attribute,
@@ -38,9 +39,9 @@ _BLOCKED_NODES = frozenset({
     ast.Try, ast.ExceptHandler, ast.TryStar,
     ast.Match, ast.MatchValue, ast.MatchSingleton, ast.MatchSequence, ast.MatchMapping,
     ast.MatchClass, ast.MatchStar, ast.MatchAs, ast.MatchOr,
-    ast.AnnAssign, ast.AugAssign, ast.Assign, ast.TypeAlias,
+    ast.AnnAssign, ast.AugAssign, ast.Assign,
     ast.FormattedValue, ast.JoinedStr,
-})
+} | ({ast.TypeAlias} if hasattr(ast, "TypeAlias") else set()))
 
 _ALLOWED_BINOPS = frozenset({
     ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.Mod,
