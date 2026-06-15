@@ -26,8 +26,7 @@ elif sys.version_info < (3, 12):
     )
 else:
     warnings.warn(
-        f"Python {sys.version_info[:2]}: full formula parser active "
-        f"(ast.TypeAlias blocked).",
+        f"Python {sys.version_info[:2]}: full formula parser active ",
         RuntimeWarning, stacklevel=2,
     )
 
