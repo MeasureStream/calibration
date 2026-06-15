@@ -603,9 +603,6 @@ def main() -> None:
     parser.add_argument("--check-units",   action=argparse.BooleanOptionalAction, default=False,
         help="(deprecated — unit checks now run automatically when model JSONs are provided)")
     parser.add_argument("--convert-units", action=argparse.BooleanOptionalAction, default=False)
-    parser.add_argument("--ufit", type=float, default=None,
-        help="Calibration fitting uncertainty (overrides sensor JSON ufit). "
-             "Use rmse_pre from previous calibration for honest uncertainty propagation.")
     parser.add_argument(
         "--charts-interactive", action="store_true", default=False,
         help="Show charts interactively via matplotlib (blocks until all windows are closed). "
@@ -691,7 +688,9 @@ def main() -> None:
     ub_sensor_lsb = float(_lookup(sensor_reading_uncertainty, "varName", "uB", {}).get("value", 0.30))
 
     # Calibration fitting uncertainty (declared by sensor manufacturer) [°C]
-    _ufit_val = float(_lookup(sensor_reading_uncertainty, "varName", "ufit", {}).get("value", 0))
+    # _ufit_val = float(_lookup(sensor_reading_uncertainty, "varName", "ufit", {}).get("value", 0)) #old
+    _metrology_uncertainty = sensor_metrology.get("Uncertainty", [])
+    _ufit_val = float(_lookup(_metrology_uncertainty, "varName", "ufit", {}).get("value", 0))
     ufit = _ufit_val if _ufit_val > 0 else None
 
     # Informational: sum of absolute uncertainties for certificate page 4
@@ -750,13 +749,63 @@ def main() -> None:
     def _coeff_from_json(val: float) -> "float | None":
         return val if val != 0.0 else None
 
-    old_A: float | None = args.old_a if args.old_a is not None else _coeff_from_json(_get_calib_coeff(sensor_json, "A"))
-    old_B: float | None = args.old_b if args.old_b is not None else _coeff_from_json(_get_calib_coeff(sensor_json, "B"))
-    old_C: float | None = args.old_c if args.old_c is not None else _coeff_from_json(_get_calib_coeff(sensor_json, "C"))
-    old_D: float | None = args.old_d if args.old_d is not None else _coeff_from_json(_get_calib_coeff(sensor_json, "D"))
+    # Read old coefficients from --last-calibration JSON (if file exists).
+    # Source precedence: CLI --old-* > last-calibration file > sensor JSON coeff* > None.
+    _last_calib_old: Dict[str, Any] = {}
+    if args.last_calibration is not None and args.last_calibration.exists():
+        try:
+            _last_calib_data = json.loads(args.last_calibration.read_text(encoding="utf-8"))
+            _last_coeffs = _last_calib_data.get("coefficients", {}) or {}
+            _last_model = _last_calib_data.get("model", "linear")
+            if _last_model == "linear":
+                _last_calib_old = {
+                    "A": _last_coeffs.get("A"),
+                    "B": _last_coeffs.get("B"),
+                    "C": None,
+                    "D": None,
+                }
+            elif _last_model == "cubic":
+                _last_calib_old = {
+                    "A": _last_coeffs.get("a0"),
+                    "B": _last_coeffs.get("a1"),
+                    "C": _last_coeffs.get("a2"),
+                    "D": _last_coeffs.get("a3"),
+                }
+        except Exception as _exc:
+            if args.verbose:
+                print(f"WARNING: failed to read --last-calibration {args.last_calibration}: {_exc}")
+
+    def _src_for(key: str) -> str:
+        cli_attr = f"old_{key.lower()}"
+        if getattr(args, cli_attr, None) is not None:
+            return f"CLI --old-{key.lower()}"
+        if _last_calib_old.get(key) is not None:
+            return f"--last-calibration {args.last_calibration.name}"
+        if _get_calib_coeff(sensor_json, key) != 0.0:
+            return f"sensor JSON coeff{key}"
+        return "identity (first calibration)"
+
+    def _resolve_old(key: str) -> "float | None":
+        cli_attr = f"old_{key.lower()}"
+        if getattr(args, cli_attr, None) is not None:
+            return getattr(args, cli_attr)
+        if _last_calib_old.get(key) is not None:
+            v = _last_calib_old[key]
+            return float(v) if v is not None else None
+        return _coeff_from_json(_get_calib_coeff(sensor_json, key))
+
+    old_A: float | None = _resolve_old("A")
+    old_B: float | None = _resolve_old("B")
+    old_C: float | None = _resolve_old("C")
+    old_D: float | None = _resolve_old("D")
 
     if args.verbose:
-        print(f"Previous coefficients: A={old_A}, B={old_B}, C={old_C}, D={old_D}")
+        print("=== Previous results (as-found baseline) ===")
+        print(f"  old_A = {old_A}  [source: {_src_for('A')}]")
+        print(f"  old_B = {old_B}  [source: {_src_for('B')}]")
+        print(f"  old_C = {old_C}  [source: {_src_for('C')}]")
+        print(f"  old_D = {old_D}  [source: {_src_for('D')}]")
+        print(f"  ufit  = {ufit}  [source: {'sensor JSON' if ufit else 'not set'}]")
 
     # Build formula variables from readingUncertainty and calibration coefficients
     _formula_vars: Dict[str, float] | None = None
@@ -908,16 +957,17 @@ def main() -> None:
     # ── R18: output boundary validation — verify measurements are in physical units, not LSB ──
     _validate_output_domain(cert_filled, sensor_json, _cert_unit_sym)
 
-    # ── R18: write full calibration result for downstream consumers ──
-    if args.last_calibration is not None:
-        last_calib_json = _build_last_calib_json(calib_result, cert_filled)
-        args.last_calibration.parent.mkdir(parents=True, exist_ok=True)
-        args.last_calibration.write_text(
-            json.dumps(last_calib_json, indent=2, ensure_ascii=False, default=str),
-            encoding="utf-8",
-        )
-        if args.verbose:
-            print(f"Last calibration JSON written to: {args.last_calibration}")
+    # ── R18: --last-calibration is currently INPUT-only (read old baseline).
+    #   Writing new results back is disabled pending a clearer contract.
+    # if args.last_calibration is not None:
+    #     last_calib_json = _build_last_calib_json(calib_result, cert_filled)
+    #     args.last_calibration.parent.mkdir(parents=True, exist_ok=True)
+    #     args.last_calibration.write_text(
+    #         json.dumps(last_calib_json, indent=2, ensure_ascii=False, default=str),
+    #         encoding="utf-8",
+    #     )
+    #     if args.verbose:
+    #         print(f"Last calibration JSON written to: {args.last_calibration}")
 
     if calibration_skipped:
         _apply_calibration_skipped(cert_filled, calib_result, old_A, old_B, old_C, old_D, lsb_per_y)
