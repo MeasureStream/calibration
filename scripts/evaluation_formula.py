@@ -2,11 +2,34 @@ from __future__ import annotations
 
 import ast
 import math
+import sys
+import warnings
 from typing import Dict
 
 import pint as _pint
 
 _UREG = _pint.UnitRegistry()
+
+# Compatibility shim: ast.TypeAlias was added in Python 3.12.
+_TYPEALIAS_BLOCKED = hasattr(ast, "TypeAlias")
+if sys.version_info >= (3, 12) and not _TYPEALIAS_BLOCKED:
+    warnings.warn(
+        f"Python {sys.version_info[:2]}: ast.TypeAlias unexpectedly missing; "
+        f"formula parser running without TypeAlias support.",
+        RuntimeWarning, stacklevel=2,
+    )
+elif sys.version_info < (3, 12):
+    warnings.warn(
+        f"Python {sys.version_info[:2]} (pre-3.12): ast.TypeAlias unavailable, "
+        f"degraded formula parser in use (no TypeAlias blocking).",
+        RuntimeWarning, stacklevel=2,
+    )
+else:
+    warnings.warn(
+        f"Python {sys.version_info[:2]}: full formula parser active "
+        f"(ast.TypeAlias blocked).",
+        RuntimeWarning, stacklevel=2,
+    )
 
 # public alias for downstream callers
 ureg = _UREG
@@ -23,7 +46,7 @@ _ALLOWED_FUNCTIONS = frozenset({
 })
 
 # AST node types BLOCKED (everything else is allowed; Call nodes further restricted by _ALLOWED_FUNCTIONS)
-# ast.TypeAlias is only available in Python 3.12+, so we add it conditionally
+# ast.TypeAlias is only available in Python 3.12+ (see compatibility shim above).
 _BLOCKED_NODES = frozenset({
     ast.Import, ast.ImportFrom,
     ast.Attribute,
@@ -41,7 +64,7 @@ _BLOCKED_NODES = frozenset({
     ast.MatchClass, ast.MatchStar, ast.MatchAs, ast.MatchOr,
     ast.AnnAssign, ast.AugAssign, ast.Assign,
     ast.FormattedValue, ast.JoinedStr,
-} | ({ast.TypeAlias} if hasattr(ast, "TypeAlias") else set()))
+} | ({ast.TypeAlias} if _TYPEALIAS_BLOCKED else set()))
 
 _ALLOWED_BINOPS = frozenset({
     ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.Mod,
