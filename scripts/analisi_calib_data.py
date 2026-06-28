@@ -506,7 +506,7 @@ def _build_cert_filled(
         )
 
         measurements.append([
-            float(i + 1), ref_t, t_sensor_post, error_pre, error_post, expanded_uncertainties[i],
+            float(i + 1), ref_t, t_sensor_pre, error_pre, error_post, expanded_uncertainties[i],
         ])
 
     rmse_pre = float(math.sqrt(sum(e[3]**2 for e in measurements) / max(1, len(measurements))))
@@ -1275,7 +1275,7 @@ def main() -> None:
         sH, rH = _checks.check_H(
             measurements, mae_y=args.mae_y,
             pfa_threshold_pct=args.pfa_threshold_pct,
-            verbose=False, u_std_mode=args.pfa_u_std_mode,
+            verbose=args.verbose, u_std_mode=args.pfa_u_std_mode,
             u_budget_per_step=u_budget_conf,
             adc_bits=adc_bits, adc_max=adc_max,
             coverage_factor=_get_coverage_factor(sensor_json),
