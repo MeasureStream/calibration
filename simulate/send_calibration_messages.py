@@ -16,8 +16,9 @@ import os
 import argparse
 from kafka import KafkaProducer
 
-# BOOTSTRAP = "100.78.181.75:9092"
-BOOTSTRAP = "100.87.231.127:9092"
+BOOTSTRAP_TAILSCALE_EXT = "100.78.181.75:9092"
+BOOTSTRAP_TAILSCALE_2   = "100.87.231.127:9092"
+BOOTSTRAP = BOOTSTRAP_TAILSCALE_2
 
 TOPIC = "calibrations"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -41,7 +42,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--msg", type=int, choices=[0, 1], default=None,
                         help="Which message to send (0 or 1). Default: both.")
+    parser.add_argument("--bootstrap", default=BOOTSTRAP,
+                        help=f"Kafka bootstrap server. Default: {BOOTSTRAP}")
     args = parser.parse_args()
+    bootstrap = args.bootstrap
 
     print(f"Loading messages from {MSG_FILE}...")
     with open(MSG_FILE, encoding="utf-8") as f:
@@ -49,9 +53,9 @@ def main():
 
     print(f"Found {len(messages)} messages (steps) in file.")
 
-    print(f"\nConnecting to Kafka at {BOOTSTRAP}...")
+    print(f"\nConnecting to Kafka at {bootstrap}...")
     producer = KafkaProducer(
-        bootstrap_servers=[BOOTSTRAP],
+        bootstrap_servers=[bootstrap],
         request_timeout_ms=15000,
         retries=3,
     )
