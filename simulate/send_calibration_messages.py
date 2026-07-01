@@ -1,13 +1,11 @@
 """
-Invia i due messaggi di calibrazione dal file one_measure.json
+Invia i messaggi di calibrazione dal file one_measure.json
 al topic "calibrations" uno alla volta.
 
 Uso:
-    python send_calibration_messages.py           # invia entrambi
-    python send_calibration_messages.py --msg 0   # solo step 0
-    python send_calibration_messages.py --msg 1   # solo step 1
-
-Kafka bootstrap: 100.78.181.75:9092 (Tailscale esterno)
+    python send_calibration_messages.py                  # invia tutti gli step
+    python send_calibration_messages.py --msg 0          # solo step 0
+    python send_calibration_messages.py --bootstrap 100.78.181.75:9092
 """
 
 import json
@@ -16,8 +14,8 @@ import os
 import argparse
 from kafka import KafkaProducer
 
-BOOTSTRAP_TAILSCALE_EXT = "100.78.181.75:9092"
-BOOTSTRAP_TAILSCALE_2   = "100.87.231.127:9092"
+BOOTSTRAP_TAILSCALE_1 = "100.78.181.75:9092"
+BOOTSTRAP_TAILSCALE_2 = "100.87.231.127:9092"
 BOOTSTRAP = BOOTSTRAP_TAILSCALE_2
 
 TOPIC = "calibrations"
@@ -40,8 +38,8 @@ def send(producer, msg, index):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--msg", type=int, choices=[0, 1], default=None,
-                        help="Which message to send (0 or 1). Default: both.")
+    parser.add_argument("--msg", type=int, default=None,
+                        help="Which message step to send. Default: all.")
     parser.add_argument("--bootstrap", default=BOOTSTRAP,
                         help=f"Kafka bootstrap server. Default: {BOOTSTRAP}")
     args = parser.parse_args()

@@ -278,9 +278,9 @@ def load_ref_temperatures() -> list[np.ndarray]:
     return [CENTRED_REF_DATA[label] for label in STEP_LABELS]
 
 
-def make_calib_id(sensor_id: int, mu_id: int) -> str:
+def make_calib_id(mu_id: int, sensor_id: int) -> str:
     ts = datetime.now().strftime("%Y%m%dT%H%M%S")
-    return f"calib-{sensor_id}-{mu_id}-{ts}"
+    return f"calib-{mu_id}-{sensor_id}-{ts}"
 
 
 def encode_sensor_b64(values: list[int]) -> str:
@@ -388,7 +388,7 @@ def simulate():
     #    + 100 readings per reference  (with within-group dispersion)
 
     now = datetime.now().replace(microsecond=0)
-    calib_id = make_calib_id(SENSOR_ID, MU_ID)
+    calib_id = make_calib_id(MU_ID, SENSOR_ID)
 
     step_summary = [
         {"target": t, "minutes": 1}

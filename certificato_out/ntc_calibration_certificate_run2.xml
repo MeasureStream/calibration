@@ -441,7 +441,7 @@
                                 </dcc:name>
                                 <si:hybrid>
                                     <si:realListXMLList>
-                                        <si:valueXMLList>-273.21 -273.21 -273.21 -273.21 -273.21 -273.21 -273.21 -273.21</si:valueXMLList>
+                                        <si:valueXMLList>-20.02 -9.97 0.02 24.97 50 75.01 100 110</si:valueXMLList>
                                         <si:unitXMLList>\degreeCelsius</si:unitXMLList>
                                     </si:realListXMLList>
                                 </si:hybrid>
@@ -452,7 +452,7 @@
                                 </dcc:name>
                                 <si:hybrid>
                                     <si:realListXMLList>
-                                        <si:valueXMLList>-253.21 -263.21 -273.21 -298.21 -323.21 -348.21 -373.21 -383.21</si:valueXMLList>
+                                        <si:valueXMLList>-0.02 0.03 0.02 -0.03 -0 0.01 -0 0</si:valueXMLList>
                                         <si:unitXMLList>\degreeCelsius</si:unitXMLList>
                                     </si:realListXMLList>
                                 </si:hybrid>
@@ -471,50 +471,6 @@
                                             <si:coverageProbabilityXMLList>0.95 0.95 0.95 0.95 0.95 0.95 0.95 0.95</si:coverageProbabilityXMLList>
                                             <si:distributionXMLList>normal</si:distributionXMLList>
                                         </si:expandedUncXMLList>
-                                    </si:realListXMLList>
-                                </si:hybrid>
-                            </dcc:quantity>
-                            <dcc:quantity refType="gp_uncertaintyTypeA_reference">
-                                <dcc:name>
-                                    <dcc:content lang="en">Type A standard uncertainty – reference (u_A,ref)</dcc:content>
-                                </dcc:name>
-                                <si:hybrid>
-                                    <si:realListXMLList>
-                                        <si:valueXMLList>0.0028 0.0012 0.0019 0.0046 0.0025 0.0022 0.0049 0.0047</si:valueXMLList>
-                                        <si:unitXMLList>\degreeCelsius</si:unitXMLList>
-                                    </si:realListXMLList>
-                                </si:hybrid>
-                            </dcc:quantity>
-                            <dcc:quantity refType="gp_uncertaintyTypeA_sensor">
-                                <dcc:name>
-                                    <dcc:content lang="en">Type A standard uncertainty – sensor (u_A,sensor)</dcc:content>
-                                </dcc:name>
-                                <si:hybrid>
-                                    <si:realListXMLList>
-                                        <si:valueXMLList>0.021 0.03 0.037 0.028 0.027 0.029 0.021 0.033</si:valueXMLList>
-                                        <si:unitXMLList>\degreeCelsius</si:unitXMLList>
-                                    </si:realListXMLList>
-                                </si:hybrid>
-                            </dcc:quantity>
-                            <dcc:quantity refType="gp_combinedStandardUncertainty">
-                                <dcc:name>
-                                    <dcc:content lang="en">Combined standard uncertainty u_c(E)</dcc:content>
-                                </dcc:name>
-                                <si:hybrid>
-                                    <si:realListXMLList>
-                                        <si:valueXMLList>0.01849144 0.02122023 0.0238607 0.02061404 0.02018928 0.0210663 0.01852069 0.02236961</si:valueXMLList>
-                                        <si:unitXMLList>\degreeCelsius</si:unitXMLList>
-                                    </si:realListXMLList>
-                                </si:hybrid>
-                            </dcc:quantity>
-                            <dcc:quantity refType="gp_coverageFactor">
-                                <dcc:name>
-                                    <dcc:content lang="en">Coverage factor k (k=2, p≈95%)</dcc:content>
-                                </dcc:name>
-                                <si:hybrid>
-                                    <si:realListXMLList>
-                                        <si:valueXMLList>2 2 2 2 2 2 2 2</si:valueXMLList>
-                                        <si:unitXMLList>\one</si:unitXMLList>
                                     </si:realListXMLList>
                                 </si:hybrid>
                             </dcc:quantity>
