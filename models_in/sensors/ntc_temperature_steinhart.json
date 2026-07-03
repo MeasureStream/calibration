@@ -93,10 +93,10 @@
       0.0
     ],
     "calibrationCoefficients": {
-      "a": { "siExp": 0, "si": [0, 0, 0, 0, -1, 1, 0, 0], "dsi": "\\per\\kelvin" },
-      "b": { "siExp": 0, "si": [0, 0, 0, 0, -1, 1, 0, 0], "dsi": "\\per\\kelvin" },
-      "c": { "siExp": 0, "si": [0, 0, 0, 0, -1, 1, 0, 0], "dsi": "\\per\\kelvin" },
-      "d": { "siExp": 0, "si": [0, 0, 0, 0, -1, 1, 0, 0], "dsi": "\\per\\kelvin" }
+      "A": { "value": 0.0006098939965346051, "siExp": 0, "si": [0, 0, 0, 0, -1, 1, 0, 0], "dsi": "\\per\\kelvin" },
+      "B": { "value": 0.00023822032643083801, "siExp": 0, "si": [0, 0, 0, 0, -1, 1, 0, 0], "dsi": "\\per\\kelvin" },
+      "C": { "value": 1.5679724473113055e-09, "siExp": 0, "si": [0, 0, 0, 0, -1, 1, 0, 0], "dsi": "\\per\\kelvin" },
+      "D": { "value": 0.0, "siExp": 0, "si": [0, 0, 0, 0, -1, 1, 0, 0], "dsi": "\\per\\kelvin" }
     }
   },
   "metrology": {
