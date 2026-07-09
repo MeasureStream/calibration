@@ -23,7 +23,7 @@ NUM_SENSOR_PER_REF = 10                     # sensor readings per reference poin
 SENSOR_SAMPLING_FREQ_HZ = 1
 
 # Noise model: bias in °C, dispersion in LSB (so it stays constant across the ADC range)
-NOISE_BIAS_MEAN_C = 0.1                       # mean of sensor noise [°C]
+NOISE_BIAS_MEAN_C = 0.74                    # mean of sensor noise [°C] 0 0 60 72 74
 U_B_STD_C = 0.5                               # Type-B std uncertainty [°C]
 DISPERSION_STD_LSB = 5.0                      # within-group noise floor [LSB], ~ADC quantization + ref noise
 
@@ -515,7 +515,7 @@ def simulate():
 
     fig1.tight_layout()
     fig1.savefig(str(PLOT_FILE_1), dpi=150)
-    plt.show(block=False)
+    # plt.show(block=False)
     print(f"plot 1  : {PLOT_FILE_1}")
 
 
@@ -566,7 +566,7 @@ def simulate():
 
     fig2.tight_layout()
     fig2.savefig(str(PLOT_FILE_2), dpi=150)
-    plt.show()
+    # plt.show()
     print(f"plot 2  : {PLOT_FILE_2}")
 
 

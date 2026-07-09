@@ -67,54 +67,20 @@
         "alpha_25": -0.04443,
         "uncertainty_limit": 0.1,
         "calibration_formula": "T = A · N + B",
-        "calibration_procedure": "steinhart",
-        "method_description": "GUM-compliant Ordinary Least Squares (OLS) Steinhart-Hart regression in the resistance domain. The raw NTC ADC reading D [LSB] is first converted to thermistor resistance R [Ω] using a voltage-divider chain declared in preprocessingFormula (R = R_fixed * (adcMax - D) / D). The regression model is 1/T_K = a + b*ln(R) + c*(ln R)^3, where T_K is the absolute temperature. Sensor type-B uncertainty is computed per step via evaluationFormula (currently uB only). Hardware constants (R_fixed, vRef, adcMax) are declared in preprocessingFormulaConstants and propagate as Type-B contributions. Uncertainty propagation follows ISO/IEC Guide 98-3 (GUM).",
+        "calibration_procedure": "linear",
+        "method_description": "GUM-compliant Ordinary Least Squares (OLS) linear regression in the 16-bit LSB domain. The calibration model is T_ref_lsb = A * T_sensor_lsb + B, where T_ref_lsb are the PT100 reference readings (converted to LSB) and T_sensor_lsb are the raw NTC ADC readings. Uncertainty propagation follows ISO/IEC Guide 98-3 (GUM).",
         "observations": [
           "Results refer exclusively to the instrument identified in this certificate.",
           "Calibration is valid under the declared conditions and on the execution date.",
           "Reference temperature T_ref measured by PT100/Fluke 1502A (mean per step).",
           "Sensor temperature T_sensor measured by NTC via TMP126 ADC (mean per step)."
         ],
-        "_calib_model": "steinhart",
-        "_theta": [
-          0.0006098939965346051,
-          0.00023822032643083801,
-          1.5679724473113055e-09
-        ],
-        "_a": 0.0006098939965346051,
-        "_b": 0.00023822032643083801,
-        "_c": 1.5679724473113055e-09,
-        "_u_a": 0.30719999181460694,
-        "_u_b": 0.042578051212266675,
-        "_u_c": 0.00011137311714817981,
-        "_cov_theta": [
-          [
-            0.09437183497089457,
-            -0.013042275557162981,
-            3.3567385265608315e-05
-          ],
-          [
-            -0.013042275557162981,
-            0.0018128904450344036,
-            -4.705598676024719e-06
-          ],
-          [
-            3.3567385265608315e-05,
-            -4.705598676024719e-06,
-            1.2403971223302183e-08
-          ]
-        ],
-        "_R_arr": [
-          1208963.6452536867,
-          643452.2127242547,
-          359707.80804109987,
-          99789.46618624753,
-          33613.609566919484,
-          13241.978015342715,
-          5914.207565912632,
-          4411.115056282196
-        ],
-        "_preprocessing_formula": null
+        "_calib_model": "linear",
+        "_A_cal": 0.002033,
+        "_B_cal": -21.52,
+        "_u_A": 5.575765007049235e-07,
+        "_u_B": 0.02260395910119906,
+        "_cov_AB": -1.0003522709512385e-08
       },
       "model": "0001-3",
       "serial_number": "00010001-3",
@@ -134,54 +100,20 @@
         "alpha_25": -0.04443,
         "uncertainty_limit": 0.1,
         "calibration_formula": "T = A · N + B",
-        "calibration_procedure": "steinhart",
-        "method_description": "GUM-compliant Ordinary Least Squares (OLS) Steinhart-Hart regression in the resistance domain. The raw NTC ADC reading D [LSB] is first converted to thermistor resistance R [Ω] using a voltage-divider chain declared in preprocessingFormula (R = R_fixed * (adcMax - D) / D). The regression model is 1/T_K = a + b*ln(R) + c*(ln R)^3, where T_K is the absolute temperature. Sensor type-B uncertainty is computed per step via evaluationFormula (currently uB only). Hardware constants (R_fixed, vRef, adcMax) are declared in preprocessingFormulaConstants and propagate as Type-B contributions. Uncertainty propagation follows ISO/IEC Guide 98-3 (GUM).",
+        "calibration_procedure": "linear",
+        "method_description": "GUM-compliant Ordinary Least Squares (OLS) linear regression in the 16-bit LSB domain. The calibration model is T_ref_lsb = A * T_sensor_lsb + B, where T_ref_lsb are the PT100 reference readings (converted to LSB) and T_sensor_lsb are the raw NTC ADC readings. Uncertainty propagation follows ISO/IEC Guide 98-3 (GUM).",
         "observations": [
           "Results refer exclusively to the instrument identified in this certificate.",
           "Calibration is valid under the declared conditions and on the execution date.",
           "Reference temperature T_ref measured by PT100/Fluke 1502A (mean per step).",
           "Sensor temperature T_sensor measured by NTC via TMP126 ADC (mean per step)."
         ],
-        "_calib_model": "steinhart",
-        "_theta": [
-          0.0006098939965346051,
-          0.00023822032643083801,
-          1.5679724473113055e-09
-        ],
-        "_a": 0.0006098939965346051,
-        "_b": 0.00023822032643083801,
-        "_c": 1.5679724473113055e-09,
-        "_u_a": 0.30719999181460694,
-        "_u_b": 0.042578051212266675,
-        "_u_c": 0.00011137311714817981,
-        "_cov_theta": [
-          [
-            0.09437183497089457,
-            -0.013042275557162981,
-            3.3567385265608315e-05
-          ],
-          [
-            -0.013042275557162981,
-            0.0018128904450344036,
-            -4.705598676024719e-06
-          ],
-          [
-            3.3567385265608315e-05,
-            -4.705598676024719e-06,
-            1.2403971223302183e-08
-          ]
-        ],
-        "_R_arr": [
-          1208963.6452536867,
-          643452.2127242547,
-          359707.80804109987,
-          99789.46618624753,
-          33613.609566919484,
-          13241.978015342715,
-          5914.207565912632,
-          4411.115056282196
-        ],
-        "_preprocessing_formula": null
+        "_calib_model": "linear",
+        "_A_cal": 0.002033,
+        "_B_cal": -21.52,
+        "_u_A": 5.575765007049235e-07,
+        "_u_B": 0.02260395910119906,
+        "_cov_AB": -1.0003522709512385e-08
       }
     },
     "calibration_specific_data": {
@@ -219,132 +151,132 @@
         [
           1.0,
           -19.999239130434777,
-          -273.20795912799036,
-          -253.2087199975556,
-          -0.02095865338830194,
-          0.07396577874094121
+          -76420.11601056058,
+          -76400.11677143014,
+          3.7721747786897026,
+          0.061932140446555074
         ],
         [
           2.0,
           -10.0000090625,
-          -273.2079560651634,
-          -263.2079470026634,
-          0.02538465135529755,
-          0.08488091424075651
+          -138717.97690072766,
+          -138707.97689166517,
+          -1.9102792905461463,
+          0.06816625217809867
         ],
         [
           3.0,
           -0.000506071428571428,
-          -273.2079532420511,
-          -273.2074471706225,
-          0.019256983348850096,
-          0.09544279293028933
+          -234794.1278188921,
+          -234794.12731282067,
+          -5.252423322501706,
+          0.08422965911488726
         ],
         [
           4.0,
           25.000575086666668,
-          -273.20794702141507,
-          -298.20852210808175,
-          -0.03433186932577925,
-          0.08245615960835202
+          -641876.7946855561,
+          -641901.7952606428,
+          -2.0457191616995836,
+          0.09906735660587737
         ],
         [
           5.0,
           49.9991384375,
-          -273.2079417463266,
-          -323.2070801838266,
-          -0.0019490098791337118,
-          0.08075712699413327
+          -1149692.7443850331,
+          -1149742.7435234706,
+          8.143566188789066,
+          0.09167267170891225
         ],
         [
           6.0,
           74.99979076923077,
-          -273.2079372330172,
-          -348.207728002248,
-          0.013103524664558108,
-          0.08426518666403557
+          -1519965.7468136784,
+          -1520040.7466044477,
+          8.800064632558673,
+          0.07508222688888777
         ],
         [
           7.0,
           100.00059495666666,
-          -273.20793332961966,
-          -373.2085282862863,
-          -0.0011770708941440944,
-          0.07408276360268284
+          -1719140.4321688467,
+          -1719240.4327638033,
+          -2.3994229606294795,
+          0.06289381603746179
         ],
         [
           8.0,
           109.99977434333331,
-          -273.20793190999217,
-          -383.20770625332545,
-          0.0011331412706283572,
-          0.0894784417015189
+          -1766629.5595607774,
+          -1766739.5593351207,
+          -9.107960864660583,
+          0.06352325053616703
         ]
       ],
       "measurements": [
         [
           1,
           -20.0,
-          -273.21,
-          -253.21,
-          -0.02,
-          0.07
+          -76420.12,
+          -76400.12,
+          3.77,
+          0.06
         ],
         [
           2,
           -10.0,
-          -273.21,
-          -263.21,
-          0.03,
-          0.08
+          -138717.98,
+          -138707.98,
+          -1.91,
+          0.07
         ],
         [
           3,
           -0.0,
-          -273.21,
-          -273.21,
-          0.02,
-          0.1
+          -234794.13,
+          -234794.13,
+          -5.25,
+          0.08
         ],
         [
           4,
           25.0,
-          -273.21,
-          -298.21,
-          -0.03,
-          0.08
+          -641876.79,
+          -641901.8,
+          -2.05,
+          0.1
         ],
         [
           5,
           50.0,
-          -273.21,
-          -323.21,
-          -0.0,
-          0.08
+          -1149692.74,
+          -1149742.74,
+          8.14,
+          0.09
         ],
         [
           6,
           75.0,
-          -273.21,
-          -348.21,
-          0.01,
+          -1519965.75,
+          -1520040.75,
+          8.8,
           0.08
         ],
         [
           7,
           100.0,
-          -273.21,
-          -373.21,
-          -0.0,
-          0.07
+          -1719140.43,
+          -1719240.43,
+          -2.4,
+          0.06
         ],
         [
           8,
           110.0,
-          -273.21,
-          -383.21,
-          0.0,
-          0.09
+          -1766629.56,
+          -1766739.56,
+          -9.11,
+          0.06
         ]
       ],
       "_observations": [
@@ -439,27 +371,27 @@
     }
   },
   "_calibration_result": {
-    "_calib_model": "steinhart",
-    "_calibration_procedure": "steinhart",
-    "_method_description": "GUM-compliant Ordinary Least Squares (OLS) Steinhart-Hart regression in the resistance domain. The raw NTC ADC reading D [LSB] is first converted to thermistor resistance R [Ω] using a voltage-divider chain declared in preprocessingFormula (R = R_fixed * (adcMax - D) / D). The regression model is 1/T_K = a + b*ln(R) + c*(ln R)^3, where T_K is the absolute temperature. Sensor type-B uncertainty is computed per step via evaluationFormula (currently uB only). Hardware constants (R_fixed, vRef, adcMax) are declared in preprocessingFormulaConstants and propagate as Type-B contributions. Uncertainty propagation follows ISO/IEC Guide 98-3 (GUM).",
+    "_calib_model": "linear",
+    "_calibration_procedure": "linear",
+    "_method_description": "GUM-compliant Ordinary Least Squares (OLS) linear regression in the 16-bit LSB domain. The calibration model is T_ref_lsb = A * T_sensor_lsb + B, where T_ref_lsb are the PT100 reference readings (converted to LSB) and T_sensor_lsb are the raw NTC ADC readings. Uncertainty propagation follows ISO/IEC Guide 98-3 (GUM).",
     "_lsb_per_y": 451.9655172413793,
     "_adc_bits": 16,
     "_phys_unit_symbol": "°C",
     "_phys_unit_dsi": "\\degreeCelsius",
     "_expanded_uncertainties": [
-      0.07396577874094121,
-      0.08488091424075651,
-      0.09544279293028933,
-      0.08245615960835202,
-      0.08075712699413327,
-      0.08426518666403557,
-      0.07408276360268284,
-      0.0894784417015189
+      0.061932140446555074,
+      0.06816625217809867,
+      0.08422965911488726,
+      0.09906735660587737,
+      0.09167267170891225,
+      0.07508222688888777,
+      0.06289381603746179,
+      0.06352325053616703
     ],
     "_interp_unc_sum_abs": 0.04106279087510491,
     "_interp_unc_fixed_2sig": 0.041,
-    "_rmse": 0.023712127017852903,
-    "_rmse_pre": 317.96381502745817,
+    "_rmse": 6.857141978025054,
+    "_rmse_pre": 1129260.3586788403,
     "_ref_temp_means": [
       -19.999239130434777,
       -10.0000090625,
@@ -482,14 +414,14 @@
     ],
     "_variant": "funzione",
     "_expanded_uncertainties_phys": [
-      0.07396577874094121,
-      0.08488091424075651,
-      0.09544279293028933,
-      0.08245615960835202,
-      0.08075712699413327,
-      0.08426518666403557,
-      0.07408276360268284,
-      0.0894784417015189
+      0.061932140446555074,
+      0.06816625217809867,
+      0.08422965911488726,
+      0.09906735660587737,
+      0.09167267170891225,
+      0.07508222688888777,
+      0.06289381603746179,
+      0.06352325053616703
     ],
     "_unc_sum_abs_phys": 0.04106279087510491,
     "_unc_fixed_2sig_phys": 0.041,
@@ -503,187 +435,119 @@
       100.00059495666666,
       109.99977434333331
     ],
-    "_theta": [
-      0.0006098939965346051,
-      0.00023822032643083801,
-      1.5679724473113055e-09
-    ],
-    "_a": 0.0006098939965346051,
-    "_b": 0.00023822032643083801,
-    "_c": 1.5679724473113055e-09,
-    "_u_a": 0.30719999181460694,
-    "_u_b": 0.042578051212266675,
-    "_u_c": 0.00011137311714817981,
-    "_cov_theta": [
-      [
-        0.09437183497089457,
-        -0.013042275557162981,
-        3.3567385265608315e-05
-      ],
-      [
-        -0.013042275557162981,
-        0.0018128904450344036,
-        -4.705598676024719e-06
-      ],
-      [
-        3.3567385265608315e-05,
-        -4.705598676024719e-06,
-        1.2403971223302183e-08
-      ]
-    ],
-    "_R_arr": [
-      1208963.6452536867,
-      643452.2127242547,
-      359707.80804109987,
-      99789.46618624753,
-      33613.609566919484,
-      13241.978015342715,
-      5914.207565912632,
-      4411.115056282196
-    ],
+    "_A": 0.002032710676652935,
+    "_B": -21.522407348726325,
     "_u_budget_per_step": [
       {
-        "t_nominal": -20.0,
+        "t_nom": -20.0,
         "uA_ref": 0.0028,
         "uB_ref": 0.03,
         "u_res_ref": 0.0002886751345948129,
-        "uA_sensor": 0.021,
-        "uB_sensor_res": 0.001769796853982485,
-        "sens_i": 0.006130756140346442,
-        "R_i": 1208963.6452536867,
-        "D_i": 2602.7359982580915,
-        "u_fitting": 0.023712127017852903,
-        "mu_E": 0.036982889370470604,
-        "U_E": 0.07396577874094121,
-        "u_cal_poly": 1559.9457284896037,
-        "U_cal_poly": 3119.8914569792073,
-        "u_c": 0.018491444685235302,
+        "uA_sensor": 0.0071,
+        "uB_sensor": 0.0005867930281750992,
+        "u_res_sensor": 0.0005867930281750992,
+        "u_fit_i": 0.021469260360217547,
+        "u_fitting_global": 0.032,
+        "u_c": 0.031,
+        "U_exp": 0.061932140446555074,
         "k": 2.0
       },
       {
-        "t_nominal": -10.0,
+        "t_nom": -10.0,
         "uA_ref": 0.0012,
         "uB_ref": 0.03,
         "u_res_ref": 0.0002886751345948129,
-        "uA_sensor": 0.03,
-        "uB_sensor_res": 0.0010901429935331443,
-        "sens_i": 0.003776366104629271,
-        "R_i": 643452.2127242547,
-        "D_i": 4725.271532593654,
-        "u_fitting": 0.023712127017852903,
-        "mu_E": 0.04244045712037826,
-        "U_E": 0.08488091424075651,
-        "u_cal_poly": 1128.922335032381,
-        "U_cal_poly": 2257.844670064762,
-        "u_c": 0.02122022856018913,
+        "uA_sensor": 0.016,
+        "uB_sensor": 0.0005867930281750992,
+        "u_res_sensor": 0.0005867930281750992,
+        "u_fit_i": 0.02057384354479012,
+        "u_fitting_global": 0.032,
+        "u_c": 0.034,
+        "U_exp": 0.06816625217809867,
         "k": 2.0
       },
       {
-        "t_nominal": 0.0,
+        "t_nom": 0.0,
         "uA_ref": 0.0019,
         "uB_ref": 0.03,
         "u_res_ref": 0.0002886751345948129,
-        "uA_sensor": 0.037,
-        "uB_sensor_res": 0.000733173524337433,
-        "sens_i": 0.0025397875898335413,
-        "R_i": 359707.80804109987,
-        "D_i": 7997.7728900672855,
-        "u_fitting": 0.023712127017852903,
-        "mu_E": 0.047721396465144665,
-        "U_E": 0.09544279293028933,
-        "u_cal_poly": 1129.3982007956124,
-        "U_cal_poly": 2258.796401591225,
-        "u_c": 0.023860698232572333,
+        "uA_sensor": 0.029,
+        "uB_sensor": 0.0005867930281750992,
+        "u_res_sensor": 0.0005867930281750992,
+        "u_fit_i": 0.019254143411023585,
+        "u_fitting_global": 0.032,
+        "u_c": 0.042,
+        "U_exp": 0.08422965911488726,
         "k": 2.0
       },
       {
-        "t_nominal": 25.0,
+        "t_nom": 25.0,
         "uA_ref": 0.0046,
         "uB_ref": 0.03,
         "u_res_ref": 0.0002886751345948129,
-        "uA_sensor": 0.028,
-        "uB_sensor_res": 0.00042046396959540173,
-        "sens_i": 0.0014565299161826627,
-        "R_i": 99789.46618624753,
-        "D_i": 21875.70383571368,
-        "u_fitting": 0.023712127017852903,
-        "mu_E": 0.04122807980417601,
-        "U_E": 0.08245615960835202,
-        "u_cal_poly": 1653.5251858228046,
-        "U_cal_poly": 3307.050371645609,
-        "u_c": 0.020614039902088006,
+        "uA_sensor": 0.039,
+        "uB_sensor": 0.0005867930281750992,
+        "u_res_sensor": 0.0005867930281750992,
+        "u_fit_i": 0.014900147700814796,
+        "u_fitting_global": 0.032,
+        "u_c": 0.05,
+        "U_exp": 0.09906735660587737,
         "k": 2.0
       },
       {
-        "t_nominal": 50.0,
+        "t_nom": 50.0,
         "uA_ref": 0.0025,
         "uB_ref": 0.03,
         "u_res_ref": 0.0002886751345948129,
-        "uA_sensor": 0.027,
-        "uB_sensor_res": 0.0004567883666871533,
-        "sens_i": 0.0015823613188171045,
-        "R_i": 33613.609566919484,
-        "D_i": 39189.19440234762,
-        "u_fitting": 0.023712127017852903,
-        "mu_E": 0.04037856349706664,
-        "U_E": 0.08075712699413327,
-        "u_cal_poly": 1784.8422817061376,
-        "U_cal_poly": 3569.684563412275,
-        "u_c": 0.02018928174853332,
+        "uA_sensor": 0.035,
+        "uB_sensor": 0.0005867930281750992,
+        "u_res_sensor": 0.0005867930281750992,
+        "u_fit_i": 0.014295256931253162,
+        "u_fitting_global": 0.032,
+        "u_c": 0.046,
+        "U_exp": 0.09167267170891225,
         "k": 2.0
       },
       {
-        "t_nominal": 75.0,
+        "t_nom": 75.0,
         "uA_ref": 0.0022,
         "uB_ref": 0.03,
         "u_res_ref": 0.0002886751345948129,
-        "uA_sensor": 0.029,
-        "uB_sensor_res": 0.0007697322814198632,
-        "sens_i": 0.0026664308392902163,
-        "R_i": 13241.978015342715,
-        "D_i": 51812.89552969152,
-        "u_fitting": 0.023712127017852903,
-        "mu_E": 0.042132593332017784,
-        "U_E": 0.08426518666403557,
-        "u_cal_poly": 1734.4544556513433,
-        "U_cal_poly": 3468.9089113026866,
-        "u_c": 0.021066296666008892,
+        "uA_sensor": 0.022,
+        "uB_sensor": 0.0005867930281750992,
+        "u_res_sensor": 0.0005867930281750992,
+        "u_fit_i": 0.01757662919592874,
+        "u_fitting_global": 0.032,
+        "u_c": 0.038,
+        "U_exp": 0.07508222688888777,
         "k": 2.0
       },
       {
-        "t_nominal": 100.0,
+        "t_nom": 100.0,
         "uA_ref": 0.0049,
         "uB_ref": 0.03,
         "u_res_ref": 0.0002886751345948129,
-        "uA_sensor": 0.021,
-        "uB_sensor_res": 0.0015470508711772982,
-        "sens_i": 0.005359141421545548,
-        "R_i": 5914.207565912632,
-        "D_i": 58603.17337301634,
-        "u_fitting": 0.023712127017852903,
-        "mu_E": 0.03704138180134142,
-        "U_E": 0.07408276360268284,
-        "u_cal_poly": 2530.1997976317934,
-        "U_cal_poly": 5060.399595263587,
-        "u_c": 0.01852069090067071,
+        "uA_sensor": 0.008,
+        "uB_sensor": 0.0005867930281750992,
+        "u_res_sensor": 0.0005867930281750992,
+        "u_fit_i": 0.020153652161042503,
+        "u_fitting_global": 0.032,
+        "u_c": 0.031,
+        "U_exp": 0.06289381603746179,
         "k": 2.0
       },
       {
-        "t_nominal": 110.0,
+        "t_nom": 110.0,
         "uA_ref": 0.0047,
         "uB_ref": 0.03,
         "u_res_ref": 0.0002886751345948129,
-        "uA_sensor": 0.033,
-        "uB_sensor_res": 0.0020706894678951264,
-        "sens_i": 0.007173078730184244,
-        "R_i": 4411.115056282196,
-        "D_i": 60222.07037313185,
-        "u_fitting": 0.023712127017852903,
-        "mu_E": 0.04473922085075945,
-        "U_E": 0.0894784417015189,
-        "u_cal_poly": 3206.502068317654,
-        "U_cal_poly": 6413.004136635308,
-        "u_c": 0.022369610425379726,
+        "uA_sensor": 0.0093,
+        "uB_sensor": 0.0005867930281750992,
+        "u_res_sensor": 0.0005867930281750992,
+        "u_fit_i": 0.020822691412523266,
+        "u_fitting_global": 0.032,
+        "u_c": 0.032,
+        "U_exp": 0.06352325053616703,
         "k": 2.0
       }
     ],
@@ -704,56 +568,56 @@
       {
         "point": 1,
         "T_ref_y": -19.999239130434777,
-        "as_found_error_y": -253.2087199975556,
+        "as_found_error_y": -76400.11677143014,
         "max_allowed_error_y": 0.6,
         "in_range": false
       },
       {
         "point": 2,
         "T_ref_y": -10.0000090625,
-        "as_found_error_y": -263.2079470026634,
+        "as_found_error_y": -138707.97689166517,
         "max_allowed_error_y": 0.6,
         "in_range": false
       },
       {
         "point": 3,
         "T_ref_y": -0.000506071428571428,
-        "as_found_error_y": -273.2074471706225,
+        "as_found_error_y": -234794.12731282067,
         "max_allowed_error_y": 0.6,
         "in_range": false
       },
       {
         "point": 4,
         "T_ref_y": 25.000575086666668,
-        "as_found_error_y": -298.20852210808175,
+        "as_found_error_y": -641901.7952606428,
         "max_allowed_error_y": 0.6,
         "in_range": false
       },
       {
         "point": 5,
         "T_ref_y": 49.9991384375,
-        "as_found_error_y": -323.2070801838266,
+        "as_found_error_y": -1149742.7435234706,
         "max_allowed_error_y": 0.6,
         "in_range": false
       },
       {
         "point": 6,
         "T_ref_y": 74.99979076923077,
-        "as_found_error_y": -348.207728002248,
+        "as_found_error_y": -1520040.7466044477,
         "max_allowed_error_y": 0.6,
         "in_range": false
       },
       {
         "point": 7,
         "T_ref_y": 100.00059495666666,
-        "as_found_error_y": -373.2085282862863,
+        "as_found_error_y": -1719240.4327638033,
         "max_allowed_error_y": 0.6,
         "in_range": false
       },
       {
         "point": 8,
         "T_ref_y": 109.99977434333331,
-        "as_found_error_y": -383.20770625332545,
+        "as_found_error_y": -1766739.5593351207,
         "max_allowed_error_y": 0.6,
         "in_range": false
       }
