@@ -1,0 +1,13 @@
+# Nell'immagine entrano il pacchetto, la pipeline che serve a calcolare e un solo payload di
+# prova, quello usato dalla prova di memoria. Uscite, grafici, documenti e dati storici restano fuori.
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!src/
+!pipeline/scripts/
+!pipeline/models_in/
+!pipeline/template_in/
+!pipeline/data_in/simulated_13p.json
+**/__pycache__
+**/*.bak

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "jobId": "0b9e2c41-6d7a-4c3f-8e15-a4b6c8d0e2f4",
+  "kind": "SESSION_FIT",
+  "status": "FAILED",
+  "engineVersion": "0.1.0+eac19a9",
+  "startedAt": "2026-12-03T11:00:00Z",
+  "finishedAt": "2026-12-03T11:10:00Z",
+  "error": {
+    "code": "TIMEOUT",
+    "message": "Il job ha superato i 600 s ed e' stato terminato"
+  },
+  "items": [],
+  "documents": []
+}

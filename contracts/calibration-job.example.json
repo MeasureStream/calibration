@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "jobId": "7d3f6a2e-1b4c-4f8e-9a51-2c0e8b7d4f10",
+  "kind": "SESSION_FIT",
+  "sessionId": 42,
+  "certificateId": null,
+  "procedure": {
+    "templateId": 401,
+    "version": "1.0.0"
+  },
+  "referenceStandardId": 3,
+  "referenceCertificateId": 17,
+  "params": {
+    "charts": true
+  },
+  "requestedBy": "5b8c0e7a-0d0f-4a5e-8f4b-9c1d2e3f4a5b",
+  "requestedAt": "2026-12-03T10:42:00Z"
+}

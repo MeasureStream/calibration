@@ -1,3 +1,26 @@
+# Ambiente
+.venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+
+# Uscite generate dalla pipeline (grafici). La regola viene dal .gitignore di Mario.
 *.png
+
+### Segreti: il repository e' pubblico ###
+# Il segreto del client Keycloak del motore arriva come variabile o file montato.
+.env
+.env.*
+*.p12
+*.pfx
+*.pem
+*.key
+secrets/
+
+# Uscite che la pipeline scrive con i suoi percorsi predefiniti, e che i test di Mario
+# rigenerano (o cancellano) a ogni esecuzione: non sono dati di riferimento.
+pipeline/certificato_out/*_test.*
+pipeline/last_calibration/last_calibration.json

@@ -1,0 +1,44 @@
+[project]
+name = "calibration-engine"
+version = "0.1.0"
+description = "Motore di taratura di MeasureStream: esegue i job di metrology-service con la pipeline di Mario Attrovio."
+readme = "README.md"
+requires-python = "==3.12.*"
+authors = [
+    { name = "Mario Attrovio" },
+    { name = "Marco Sento" },
+]
+dependencies = [
+    # La pipeline di Mario (pipeline/scripts), con i limiti inferiori del suo requirements.txt.
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "matplotlib>=3.8",
+    "reportlab>=4.0",
+    "pint>=0.23",
+    # Il motore attorno alla pipeline.
+    "confluent-kafka>=2.6",        # sulla Pi, se le wheel arm64 danno problemi: kafka-python-ng
+    "httpx>=0.27",                 # REST verso metrology-service, con token di servizio
+    "pydantic>=2.9",               # i messaggi dei job e dei risultati: il contratto con il servizio Kotlin
+    "pydantic-settings>=2.6",      # la configurazione, da variabili d'ambiente
+    "xmlschema>=3.4",              # validazione del DCC contro l'XSD della PTB
+]
+
+[project.scripts]
+calibration-engine = "calibration_engine.__main__:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/calibration_engine"]
+
+[tool.pytest.ini_options]
+# tests/ sono i test del motore; pipeline/test sono i test di Mario, eseguiti cosi' come sono.
+testpaths = ["tests", "pipeline/test"]
+addopts = "-ra"

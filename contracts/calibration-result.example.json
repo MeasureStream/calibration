@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "jobId": "7d3f6a2e-1b4c-4f8e-9a51-2c0e8b7d4f10",
+  "kind": "SESSION_FIT",
+  "status": "DONE",
+  "engineVersion": "0.1.0+eac19a9",
+  "startedAt": "2026-12-03T10:42:05Z",
+  "finishedAt": "2026-12-03T10:43:41Z",
+  "error": null,
+  "items": [
+    {
+      "calibratedItemId": 12,
+      "muExtendedId": 439041101,
+      "sensorIndex": 0,
+      "function": {
+        "type": "cubic_lsb",
+        "cubic_lsb": "c[0] + c[1] * x + c[2] * x**2 + c[3] * x**3",
+        "input": ["x"],
+        "c": [
+          { "id": 0, "value": -28.6037326404808, "dsi": "\\degreeCelsius" },
+          { "id": 1, "value": 0.00405231040537256, "dsi": "\\degreeCelsius" },
+          { "id": 2, "value": -9.56067690974795e-08, "dsi": "\\degreeCelsius" },
+          { "id": 3, "value": 1.08354428414549e-12, "dsi": "\\degreeCelsius" }
+        ]
+      },
+      "covariance": [
+        [0.0015965076372266367, -2.3046902288596967e-07, 8.135655322818519e-12, -8.096272556871257e-17],
+        [-2.3046902288596967e-07, 4.437629815236357e-11, -1.72703421480451e-15, 1.8040562790719607e-20],
+        [8.135655322818519e-12, -1.72703421480451e-15, 7.112192304729723e-20, -7.688064126330417e-25],
+        [-8.096272556871257e-17, 1.8040562790719607e-20, -7.688064126330417e-25, 8.495968747986659e-30]
+      ],
+      "calibratedRange": {
+        "min": -20.0,
+        "max": 40.0,
+        "dsi": "\\degreeCelsius"
+      },
+      "adjustmentApplied": true,
+      "points": [
+        {
+          "phase": "AS_FOUND",
+          "pointIndex": 0,
+          "nominal": -20.0,
+          "referenceValue": -20.0,
+          "indicatedValue": -34.0997,
+          "error": -14.0997,
+          "correction": null,
+          "expandedU": 0.12,
+          "k": 2.0,
+          "dsi": "\\degreeCelsius"
+        },
+        {
+          "phase": "AS_LEFT",
+          "pointIndex": 0,
+          "nominal": -10.0,
+          "referenceValue": -9.9932,
+          "indicatedValue": -9.9861,
+          "error": 0.0071,
+          "correction": null,
+          "expandedU": 0.11,
+          "k": 2.0,
+          "dsi": "\\degreeCelsius"
+        }
+      ],
+      "budget": {
+        "uA_ref": 0.0025,
+        "uB_ref": 0.0325,
+        "u_fitting_global": 0.016
+      },
+      "conformity": [
+        {
+          "against": "SPECIFICATION",
+          "source": { "kind": "sensor", "templateId": 201, "version": "2.0.1" },
+          "decisionRule": "guarded",
+          "tolerance": 0.5,
+          "pfa": 0.004,
+          "verdict": "CONFORM"
+        }
+      ],
+      "suggestedDecision": "ADJUST"
+    }
+  ],
+  "documents": [
+    { "documentId": 101, "kind": "DCC_XML", "sha256": "9f2c4e6a8b0d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c3e5b7d9f1a" },
+    { "documentId": 102, "kind": "CERTIFICATE_PDF", "sha256": "1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c3e5b7d9f1a3c" }
+  ]
+}
