@@ -17,6 +17,7 @@ from typing import Any
 
 import pytest
 
+from calibration_engine import __version__
 from calibration_engine.adapter import AdapterError, item_result, pipeline_input
 from calibration_engine.consumer import handle, healthy, touch
 from calibration_engine.contracts import CalibrationJob, CalibrationResult, JobKind, JobStatus, SuggestedDecision, Verdict
@@ -72,6 +73,7 @@ class FakeMetrology:
     def __init__(self, context: dict[str, Any]) -> None:
         self.context = context
         self.uploads: list[tuple[str, str, str | None, int]] = []
+        self.contents: dict[str, bytes] = {}
 
     def job_context(self, job_id: str) -> dict[str, Any]:
         return self.context
@@ -87,6 +89,7 @@ class FakeMetrology:
 
     def upload_document(self, content: bytes, filename: str, mime: str, kind: str, owner_sub: str | None) -> dict[str, Any]:
         self.uploads.append((filename, kind, owner_sub, len(content)))
+        self.contents[kind] = content
         import hashlib
 
         return {"id": len(self.uploads), "sha256": hashlib.sha256(content).hexdigest()}
@@ -331,3 +334,38 @@ def test_simulate_session_indirizza_i_gradini_registrati_a_una_sessione_vera():
     first = steps[0]
     assert isinstance(first["step_summary"], list) and isinstance(first["ref_readings"], list)
     assert isinstance(first["target"], float) and isinstance(first["step_index"], int)
+
+
+def test_il_dcc_cita_procedura_motore_e_campione(tmp_path: Path):
+    """Passo 3.6: procedura in usedMethods, motore con l'hash git in usedSoftware, campione con
+    il suo certificato in measuringEquipments, e non piu' fra gli oggetti tarati."""
+    import xml.etree.ElementTree as ET
+
+    block, covariance = _run5_function()
+    context = _context()
+    context["referenceCertificate"] = _reference_certificate()
+    context["items"][0]["latestFit"] = {"decision": "ADJUST", "function": block, "covariance": covariance}
+    metrology = FakeMetrology(context)
+    metrology.template_version = lambda kind, template_id, version: {  # type: ignore[method-assign]
+        "kind": "procedure", "templateId": 401, "name": "Taratura per confronto in pozzetto a secco",
+        "fitModel": "cubic", "points": [-20.0, 0.0, 20.0, 40.0], "decisionRule": {"type": "guarded", "pfaMax": 0.02},
+    }
+    result = execute(_job(JobKind.DOCUMENTS), metrology, _settings(tmp_path))
+    assert result.status == JobStatus.DONE, result.error
+
+    ns = {"dcc": "https://ptb.de/dcc"}
+    root = ET.fromstring(metrology.contents["DCC_XML"])
+    measurement = root.find(".//dcc:measurementResult", ns)
+    order = [child.tag.split("}")[1] for child in measurement]
+    assert order[:5] == ["name", "usedMethods", "usedSoftware", "measuringEquipments", "influenceConditions"], order
+
+    first_method = measurement.find("dcc:usedMethods/dcc:usedMethod/dcc:name/dcc:content[@lang='en']", ns).text
+    assert "401" in first_method and "1.0.0" in first_method
+    assert measurement.findtext("dcc:usedSoftware/dcc:software/dcc:release", namespaces=ns) == f"{__version__}+test"
+
+    equipment = measurement.find("dcc:measuringEquipments/dcc:measuringEquipment[@id='reference-standard']", ns)
+    values = [e.text for e in equipment.findall("dcc:identifications/dcc:identification/dcc:value", ns)]
+    assert "B12345" in values and "LAT-999-123 rev. 1" in values
+    assert len(root.findall("dcc:administrativeData/dcc:items/dcc:item", ns)) == 1, "il campione non e' un oggetto tarato"
+    statements = " ".join(c.text or "" for c in root.findall(".//dcc:statement/dcc:declaration/dcc:content", ns))
+    assert f"f(x) = {block['cubic_lsb']}" in statements, "la funzione come la applica il server"

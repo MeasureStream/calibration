@@ -33,6 +33,7 @@ from typing import Any, Protocol
 
 from calibration_engine import __version__
 from calibration_engine.adapter import AdapterError, item_result, item_steps, pipeline_input, tolerance_of
+from calibration_engine.dcc import enrich
 from calibration_engine.contracts import (
     CalibratedRange,
     CalibrationFunction,
@@ -540,6 +541,17 @@ def _documents(job: CalibrationJob, context: dict[str, Any], item: dict[str, Any
         refs: list[DocumentRef] = []
         xml = workdir / "dcc.xml"
         if xml.is_file():
+            procedure_ref = (context.get("session") or {}).get("procedure") or {}
+            enrich(
+                xml,
+                engine_version=f"{__version__}+{settings.git_sha}",
+                procedure_ref=(int(procedure_ref["templateId"]), str(procedure_ref.get("version"))) if procedure_ref.get("templateId") is not None else None,
+                procedure=procedure,
+                reference=context.get("reference"),
+                reference_certificate=context.get("referenceCertificate"),
+                deviations=prepared.report.deviations,
+                delivered_function=(item.get("latestFit") or {}).get("function") if decision == "ADJUST" else None,
+            )
             _validate(xml, settings)
             refs.append(_upload(client, xml, "application/xml", DocumentKind.DCC_XML, item))
         pdf = workdir / "certificato.pdf"

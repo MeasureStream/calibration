@@ -402,6 +402,27 @@ def _extract_center_tolerance(
     return default_center, default_tol
 
 
+def _reference_equipment(parent: ET.Element, ref_instr: Dict[str, Any]) -> ET.Element:
+    """Il campione di riferimento come dcc:measuringEquipment (passo 3.6)."""
+    equipment = ET.SubElement(parent, "{https://ptb.de/dcc}measuringEquipment", {"id": "reference-standard"})
+    name = ET.SubElement(equipment, "{https://ptb.de/dcc}name")
+    _safe_lang_text(name, ref_instr.get("modelName", ""), "Reference instrument", "en")
+    if ref_instr.get("manufacturer"):
+        manufacturer = ET.SubElement(equipment, "{https://ptb.de/dcc}manufacturer")
+        manufacturer_name = ET.SubElement(manufacturer, "{https://ptb.de/dcc}name")
+        _safe_lang_text(manufacturer_name, ref_instr.get("manufacturer", ""), "Unknown manufacturer", "en")
+    if ref_instr.get("mpn"):
+        _text(equipment, "{https://ptb.de/dcc}model", ref_instr["mpn"])
+    if ref_instr.get("calibrationCertificateID"):
+        idents = ET.SubElement(equipment, "{https://ptb.de/dcc}identifications")
+        cert_ident = ET.SubElement(idents, "{https://ptb.de/dcc}identification")
+        _text(cert_ident, "{https://ptb.de/dcc}issuer", "calibrationLaboratory")
+        _text(cert_ident, "{https://ptb.de/dcc}value", ref_instr["calibrationCertificateID"])
+        cert_name = ET.SubElement(cert_ident, "{https://ptb.de/dcc}name")
+        _lang_text(cert_name, "Calibration certificate", "en")
+    return equipment
+
+
 def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
     cert = data["cert"]
     org = data["org"]
@@ -666,42 +687,10 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
             _text(iq_real, "{https://ptb.de/si}value", f"{value:.6e}")
             _text(iq_real, "{https://ptb.de/si}unit", unit)
 
+    # Passo 3.6 del piano metrologico: il campione di riferimento non e' un oggetto tarato, quindi
+    # non sta in administrativeData/items ma in measurementResult/measuringEquipments, scritto
+    # piu' sotto con _reference_equipment().
     ref_instr = data.get("_ref_instrument", {})
-    if ref_instr.get("modelName") or ref_instr.get("calibrationCertificateID"):
-        ref_item = ET.SubElement(items, "{https://ptb.de/dcc}item")
-        ref_item_name = ET.SubElement(ref_item, "{https://ptb.de/dcc}name")
-        _safe_lang_text(
-            ref_item_name,
-            ref_instr.get("modelName", ""),
-            "Reference instrument",
-            "en",
-        )
-        if ref_instr.get("manufacturer"):
-            ref_man = ET.SubElement(ref_item, "{https://ptb.de/dcc}manufacturer")
-            ref_man_name = ET.SubElement(ref_man, "{https://ptb.de/dcc}name")
-            _safe_lang_text(
-                ref_man_name,
-                ref_instr.get("manufacturer", ""),
-                "Unknown manufacturer",
-                "en",
-            )
-        if ref_instr.get("mpn"):
-            _text(ref_item, "{https://ptb.de/dcc}model", ref_instr["mpn"])
-        if ref_instr.get("calibrationCertificateID"):
-            ref_idents = ET.SubElement(ref_item, "{https://ptb.de/dcc}identifications")
-            cert_ident = ET.SubElement(ref_idents, "{https://ptb.de/dcc}identification")
-            _text(
-                cert_ident,
-                "{https://ptb.de/dcc}issuer",
-                "calibrationLaboratory",
-            )
-            _text(
-                cert_ident,
-                "{https://ptb.de/dcc}value",
-                ref_instr["calibrationCertificateID"],
-            )
-            cert_name = ET.SubElement(cert_ident, "{https://ptb.de/dcc}name")
-            _lang_text(cert_name, "Calibration certificate", "en")
 
     cal_lab = ET.SubElement(admin, "{https://ptb.de/dcc}calibrationLaboratory")
     if cert.get("accreditation_code") and not _is_placeholder(cert["accreditation_code"]):
@@ -973,6 +962,10 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
         "{https://ptb.de/dcc}norm",
         _safe_text(cert["procedure_code"], "INTERNAL-PROCEDURE"),
     )
+
+    if ref_instr.get("modelName") or ref_instr.get("calibrationCertificateID"):
+        equipments = ET.SubElement(meas_result, "{https://ptb.de/dcc}measuringEquipments")
+        _reference_equipment(equipments, ref_instr)
 
     influence_conditions = ET.SubElement(
         meas_result, "{https://ptb.de/dcc}influenceConditions"
