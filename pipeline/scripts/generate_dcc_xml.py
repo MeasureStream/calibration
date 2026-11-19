@@ -752,7 +752,14 @@ def build_dcc_tree(data: Dict[str, Any]) -> ET.ElementTree:
 
     resp_persons_elem = ET.SubElement(admin, "{https://ptb.de/dcc}respPersons")
     roles = cert.get("resp_person_roles", []) or []
-    for idx, person_name in enumerate(cert["resp_persons"]):
+    # Un dizionario costruito a mano (i test, o un chiamante che non passa da
+    # _build_cert_dict) puo' non avere resp_persons: stesso ripiego del costruttore,
+    # cioe' authorised_by / executed_by, e in ultimo un nome generico. respPersons e'
+    # obbligatorio nello schema DCC e non deve restare vuoto.
+    persons = cert.get("resp_persons") or [
+        p for p in (cert.get("authorised_by"), cert.get("executed_by")) if p
+    ] or ["Responsible person 1"]
+    for idx, person_name in enumerate(persons):
         resp_person = ET.SubElement(
             resp_persons_elem, "{https://ptb.de/dcc}respPerson",
             {"id": f"signer-{idx + 1}"},

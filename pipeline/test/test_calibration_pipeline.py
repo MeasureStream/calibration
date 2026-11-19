@@ -242,6 +242,9 @@ class TestCertificatoFilledJSON:
                 "--no-pdf",
                 "--no-xml",
                 "--no-verbose",
+                # Dal 3 luglio (c6a3c5b) senza regolazione il certificato riporta i
+                # coefficienti precedenti: questi test verificano quelli del fit.
+                "--update-parameters", "always",
             ],
             capture_output=True,
             text=True,
@@ -448,6 +451,9 @@ class TestEndToEnd:
                 "--no-pdf",
                 "--no-xml",
                 "--no-verbose",
+                # Dal 3 luglio (c6a3c5b) senza regolazione il certificato riporta i
+                # coefficienti precedenti: questi test verificano quelli del fit.
+                "--update-parameters", "always",
             ],
             capture_output=True,
             text=True,
@@ -803,10 +809,13 @@ class TestLinearCalibUBudget:
         assert len(calib_result["u_budget_per_step"]) == n_steps
 
     def test_budget_entry_keys(self, calib_result):
+        # Budget GUM per punto separato per sorgente: u_ref unico e' diventato uA_ref,
+        # uB_ref e u_res_ref; u_sensor e' diventato uA_sensor, uB_sensor e u_res_sensor.
         expected = {
-            "t_nom", "uA_ref", "uA_sensor",
-            "ub_uso", "u_fitting",
-            "u_ref", "u_sensor", "u_c", "U_exp", "k",
+            "t_nom", "uA_ref", "uB_ref", "u_res_ref",
+            "uA_sensor", "uB_sensor", "u_res_sensor",
+            "u_fit_i", "u_fitting_global",
+            "u_c", "U_exp", "k",
         }
         for entry in calib_result["u_budget_per_step"]:
             assert expected.issubset(entry.keys()), f"Missing keys in: {entry.keys()}"
@@ -831,11 +840,16 @@ class TestLinearCalibUBudget:
             )
 
     def test_u_c_combines_T_ref_and_T_i(self, calib_result):
-        """u_c = sqrt(u_T_ref^2 + u_T_i^2) must hold per entry."""
+        """u_c = RSS dei contributi del riferimento e del sensore, per ogni punto.
+
+        Riferimento: tipo A, tipo B, risoluzione; sensore: tipo A e risoluzione
+        (uB_sensor e' la risoluzione per la sensibilita'). u_fit_i resta fuori da u_c.
+        """
         import math
         for entry in calib_result["u_budget_per_step"]:
             expected_uc = math.sqrt(
-                entry["u_ref"] ** 2 + entry["u_sensor"] ** 2
+                entry["uA_ref"] ** 2 + entry["uB_ref"] ** 2 + entry["u_res_ref"] ** 2
+                + entry["uA_sensor"] ** 2 + entry["uB_sensor"] ** 2
             )
             assert entry["u_c"] == pytest.approx(expected_uc, rel=1e-9)
 
