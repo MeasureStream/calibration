@@ -345,16 +345,16 @@ def _run(args: list[str], settings: EngineSettings, workdir: Path) -> None:
 # --------------------------------------------------------------------------------------------
 
 
-def function_in_force(item: dict[str, Any], sensor: dict[str, Any] | None) -> tuple[Function | None, str]:
-    """La funzione che il server applica oggi all'esemplare, e da dove viene."""
+def function_in_force(item: dict[str, Any], sensor: dict[str, Any] | None) -> tuple[Function | None, str, dict[str, Any] | None]:
+    """La funzione che il server applica oggi all'esemplare, da dove viene, e il suo blocco."""
     certificate = item.get("currentCertificate") or {}
     function = Function.of(certificate.get("function"))
     if function is not None:
-        return function, f"certificato {certificate.get('number')} rev. {certificate.get('revision')}"
+        return function, f"certificato {certificate.get('number')} rev. {certificate.get('revision')}", _clean(certificate.get("function"))
     function = Function.of((sensor or {}).get("calibration"))
     if function is not None:
-        return function, "formula nominale del template"
-    return None, "nessuna"
+        return function, "formula nominale del template", _clean((sensor or {}).get("calibration"))
+    return None, "nessuna", None
 
 
 def _fit(job: CalibrationJob, context: dict[str, Any], item: dict[str, Any], client: Metrology, settings: EngineSettings) -> ItemResult:
@@ -383,7 +383,10 @@ def _fit(job: CalibrationJob, context: dict[str, Any], item: dict[str, Any], cli
     }
     points, verdicts, suggested = translated.points, translated.conformity, translated.suggested_decision
 
-    function, source = function_in_force(item, sensor)
+    function, source, block = function_in_force(item, sensor)
+    if block is not None:
+        # Senza regolazione e' la funzione che il certificato attestera' (metrology-service).
+        budget["functionInForce"] = block
     if function is not None:
         try:
             found = point_errors(function, prepared.stats(), prepared.budget(), Phase.AS_FOUND, sensor.get("unit"))
