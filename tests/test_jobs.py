@@ -9,6 +9,7 @@ che Mario otteneva dalla riga di comando (prova del passo 3.4).
 from __future__ import annotations
 
 import json
+import math
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -19,6 +20,7 @@ import pytest
 from calibration_engine.adapter import AdapterError, item_result, pipeline_input
 from calibration_engine.consumer import handle, healthy, touch
 from calibration_engine.contracts import CalibrationJob, CalibrationResult, JobKind, JobStatus, SuggestedDecision, Verdict
+from calibration_engine.formula import evaluate, standard_uncertainty
 from calibration_engine.jobs import execute
 from calibration_engine.pipeline import pipeline_dir
 from calibration_engine.settings import EngineSettings
@@ -122,15 +124,28 @@ def test_le_uscite_di_mario_nel_contratto():
 
 
 def test_session_fit_riproduce_la_run_di_mario(tmp_path: Path):
+    """La funzione consegnata e' quella della run di Mario, nella forma centrata del passo 3.5.
+
+    Fino al passo 3.4 si confrontavano i coefficienti a0..a3 uno per uno. Dal passo 3.5 il
+    motore consegna il polinomio in s = (D - centro) / semiampiezza, con la covarianza in s
+    (vedi poly_gum.py e adapter.function_of): stessa funzione, altri coefficienti. Si confronta
+    quindi cio' che conta, sui valori del grezzo che la run ha toccato: il valore della funzione
+    e la sua incertezza gᵀΣg, valutati come li valuta sensor-manager.
+    """
     expected = json.loads((RUN5 / "last_calibration.json").read_text(encoding="utf-8"))["coefficients"]
+    theta = [expected[f"a{i}"] for i in range(4)]
     result = execute(_job(JobKind.SESSION_FIT), FakeMetrology(_context()), _settings(tmp_path))
 
     assert result.status == JobStatus.DONE, result.error
     function = result.items[0].function
-    for i, coefficient in enumerate(function.c):
-        assert coefficient.value == pytest.approx(expected[f"a{i}"], rel=1e-9)
-    for row, expected_row in zip(result.items[0].covariance, expected["cov_theta"], strict=True):
-        assert row == pytest.approx(expected_row, rel=1e-9)
+    c = [coefficient.value for coefficient in function.c]
+    assert "((x - " in function.formula, "forma centrata"
+    for d in (2667.0, 10000.0, 30000.0, 45000.0, 58668.0):
+        mario = sum(t * d**k for k, t in enumerate(theta))
+        assert evaluate(function.formula, d, c) == pytest.approx(mario, rel=1e-9)
+        g = [d**k for k in range(4)]
+        u_mario = math.sqrt(sum(g[i] * expected["cov_theta"][i][j] * g[j] for i in range(4) for j in range(4)))
+        assert standard_uncertainty(function.formula, d, c, result.items[0].covariance) == pytest.approx(u_mario, rel=1e-6)
     # Il messaggio rispetta il contratto: si rilegge uguale.
     assert CalibrationResult.model_validate_json(result.to_json()) == result
 

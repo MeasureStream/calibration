@@ -14,6 +14,7 @@ from .linear_calibration import (
     parse_step,
     phys_to_lsb16,
 )
+from .poly_gum import gum_polyfit, poly_fit
 
 _POLY_DEGREE = 2
 _N_COEFFS    = _POLY_DEGREE + 1
@@ -34,41 +35,15 @@ def _build_design_matrix(x_lsb: np.ndarray) -> np.ndarray:
     return X
 
 
-def _fit_quadratic(x_lsb: np.ndarray, y_lsb: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    X = _build_design_matrix(x_lsb)
-    XtX = X.T @ X
-    try:
-        XtX_inv = np.linalg.inv(XtX)
-    except np.linalg.LinAlgError:
-        XtX_inv = np.linalg.pinv(XtX)
-    theta = XtX_inv @ X.T @ y_lsb
-    return theta, XtX_inv, X
-
-
 def _gum_propagation_quadratic(
     x_lsb: np.ndarray,
     y_lsb: np.ndarray,
     u_x: np.ndarray,
     u_y: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    theta, XtX_inv, X = _fit_quadratic(x_lsb, y_lsb)
-    cov_theta = np.zeros((_N_COEFFS, _N_COEFFS))
-
-    for i in range(len(x_lsb)):
-        d_i = x_lsb[i]
-        x_i = X[i]
-        g_i = _d_regressor_row_dD(d_i)
-
-        dtheta_dy_i  = XtX_inv @ x_i
-        dXty_dxi     = g_i * y_lsb[i]
-        dXtX_dxi     = np.outer(x_i, g_i) + np.outer(g_i, x_i)
-        dtheta_dxi   = XtX_inv @ (dXty_dxi - dXtX_dxi @ theta)
-
-        cov_theta += np.outer(dtheta_dy_i, dtheta_dy_i) * u_y[i]**2
-        cov_theta += np.outer(dtheta_dxi,  dtheta_dxi)  * u_x[i]**2
-
-    u_theta = np.sqrt(np.maximum(0.0, np.diag(cov_theta)))
-    return theta, u_theta, cov_theta
+    # Passo 3.5 [S §6.2]: come nel cubico, il fit si fa su regressori centrati e scalati e
+    # coefficienti e covarianza tornano alle potenze di D. Vedi poly_gum.py.
+    return gum_polyfit(x_lsb, y_lsb, u_x, u_y, _POLY_DEGREE)
 
 
 def quadratic_predict(d_lsb: float, theta: np.ndarray) -> float:
@@ -194,7 +169,8 @@ def calibrate(
     if verbose:
         print("\n\n --- Fine acquisizione dati (quadratic) ---")
 
-    theta, u_theta, cov_theta = _gum_propagation_quadratic(x_lsb, y_phys, uc_tmp, uc_pt)
+    fit = poly_fit(x_lsb, y_phys, uc_tmp, uc_pt, _POLY_DEGREE)
+    theta, u_theta, cov_theta = fit.theta, fit.u_theta, fit.cov_theta
     a0, a1, a2                = theta
     u_a0, u_a1, u_a2         = u_theta
 
@@ -268,6 +244,7 @@ def calibrate(
         "a0": float(a0), "a1": float(a1), "a2": float(a2),
         "u_a0": float(u_a0), "u_a1": float(u_a1), "u_a2": float(u_a2),
         "cov_theta": cov_theta.tolist(),
+        "scaled_fit": fit.scaled(),   # passo 3.5: la stessa funzione in forma centrata
         "rmse": rmse,
         "u_fitting": u_fitting_val,
         "old_a0": None if old_a is None else float(old_a),

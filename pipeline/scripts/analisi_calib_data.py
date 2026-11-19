@@ -270,6 +270,13 @@ def _build_last_calib_json(
     else:
         budget = []
 
+    # Passo 3.5 del piano metrologico: la stessa funzione in forma centrata (s = (D - c) / h),
+    # che il motore consegna al server perche' su una gamma stretta la covarianza sulle potenze
+    # di D perde cifre. Fuori da "coefficients", che resta quello storico. Solo senza
+    # conversione di unita': --convert-units converte i coefficienti storici, non questa forma.
+    if calib_model in ("cubic", "quadratic") and calib_result.get("scaled_fit") and not _conv:
+        out["scaled_fit"] = calib_result["scaled_fit"]
+
     # Per-step calibration points with uncertainties (use converted values)
     ref_means_for_points = out["ref_temp_means"] or []
     exp_uncs_for_points = out["expanded_uncertainties"] or []

@@ -29,6 +29,7 @@ from calibration_engine.contracts import (
     SuggestedDecision,
     Verdict,
 )
+from calibration_engine.formula import centered_polynomial
 
 #: I modelli di fit della pipeline, come formula del valutatore a grammatica chiusa del server.
 #: La variabile e' la lettura grezza in LSB, come nei coefficienti a0..a3 di Mario.
@@ -102,6 +103,52 @@ def _number(value: Any) -> Any:
     return float(value) if isinstance(value, (int, float)) else value
 
 
+_DEGREES = {"quadratic": 2, "cubic": 3}
+
+
+def function_of(result: dict[str, Any]) -> tuple[str, list[float], list[list[float]] | None]:
+    """Formula, coefficienti e covarianza della funzione da consegnare al server.
+
+    - Quadratico e cubico, con la forma centrata della pipeline (passo 3.5): il polinomio in
+      ``s = (x - centro) / semiampiezza``, con la covarianza dei coefficienti in s. Su una gamma
+      stretta la covarianza sulle potenze del grezzo perde cifre quando si calcola gᵀΣg;
+      quella in s no. Centro e semiampiezza stanno nella formula come costanti.
+    - Quadratico e cubico senza forma centrata (run archiviate, ``--convert-units``): i
+      coefficienti storici a0..an sulle potenze del grezzo, come prima.
+    - Lineare: Mario scrive y = A·D + B, quindi c[0] = B e c[1] = A, con la covarianza
+      ricostruita da u(A), u(B) e cov(A, B).
+    """
+    model = result.get("model") or ""
+    coefficients = result.get("coefficients") or {}
+    scaled = result.get("scaled_fit")
+
+    if model in _DEGREES and scaled:
+        formula = centered_polynomial(_DEGREES[model], float(scaled["center"]), float(scaled["half_range"]))
+        return formula, [float(v) for v in scaled["b"]], scaled.get("cov_b")
+
+    if model == "linear":
+        try:
+            a, b = float(coefficients["A"]), float(coefficients["B"])
+        except (KeyError, TypeError) as e:
+            raise AdapterError("MISSING_COEFFICIENTS", "il risultato lineare non ha A e B") from e
+        u_a, u_b, cov_ab = coefficients.get("u_A"), coefficients.get("u_B"), coefficients.get("cov_AB")
+        covariance = None
+        if u_a is not None and u_b is not None:
+            cross = float(cov_ab or 0.0)
+            covariance = [[float(u_b) ** 2, cross], [cross, float(u_a) ** 2]]
+        return FORMULAS["linear"], [b, a], covariance
+
+    formula = FORMULAS.get(model)
+    if formula is None:
+        raise AdapterError("UNSUPPORTED_MODEL", f"il modello di fit '{model}' non ha ancora una formula per il server")
+    order = len(formula.split("c[")) - 1
+    try:
+        values = [float(coefficients[f"a{i}"]) for i in range(order)]
+    except (KeyError, TypeError) as e:
+        raise AdapterError("MISSING_COEFFICIENTS", f"il risultato '{model}' non ha a0..a{order - 1}") from e
+    return formula, values, coefficients.get("cov_theta")
+
+
 def item_result(
     result: dict[str, Any],
     conformity: dict[str, Any] | None,
@@ -111,15 +158,11 @@ def item_result(
 ) -> ItemResult:
     """Le uscite della pipeline per un esemplare, nel contratto ``ItemResult``."""
     model = result.get("model")
-    formula = FORMULAS.get(model or "")
-    if formula is None:
-        raise AdapterError("UNSUPPORTED_MODEL", f"il modello di fit '{model}' non ha ancora una formula per il server")
-
     dsi = (sensor_template or {}).get("unit")
-    coefficients = result.get("coefficients") or {}
-    order = len(formula.split("c[")) - 1
-    c = [Coefficient(id=i, value=float(coefficients[f"a{i}"]), dsi=dsi) for i in range(order)]
-    covariance = coefficients.get("cov_theta")
+    formula, values, covariance = function_of(result)
+    # Il grezzo in LSB e' un conteggio, adimensionale in D-SI (\one): ogni coefficiente ha
+    # quindi l'unita' della grandezza, sia nella forma centrata sia sulle potenze di D.
+    c = [Coefficient(id=i, value=v, dsi=dsi) for i, v in enumerate(values)]
 
     points: list[CalibrationPoint] = []
     for i, p in enumerate(result.get("calibration_points") or []):
