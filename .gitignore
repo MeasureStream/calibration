@@ -6,6 +6,7 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+.codex/
 
 # Uscite generate dalla pipeline (grafici). La regola viene dal .gitignore di Mario.
 *.png
