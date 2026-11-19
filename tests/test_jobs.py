@@ -120,7 +120,10 @@ def test_le_uscite_di_mario_nel_contratto():
     assert item.calibrated_range.min == -20.0
     assert item.conformity[0].verdict == Verdict.NON_CONFORM
     assert item.suggested_decision == SuggestedDecision.ADJUST, "l'as-found e' fuori tolleranza: si regola"
-    assert {p.phase.value for p in item.points} == {"AS_FOUND", "AS_LEFT"}
+    # Passo 3.5: i residui del fit non sono un as-left (stessi punti del fit): stanno nel budget.
+    # L'as-left si misura su punti indipendenti, nel job VERIFICATION.
+    assert {p.phase.value for p in item.points} == {"AS_FOUND"}
+    assert [r["residual"] for r in item.budget["fitResiduals"]] == [p["M_e_post"] for p in result["calibration_points"]]
 
 
 def test_session_fit_riproduce_la_run_di_mario(tmp_path: Path):
@@ -157,8 +160,131 @@ def test_una_sessione_senza_gradini_e_un_errore_leggibile(tmp_path: Path):
 
 
 def test_un_tipo_di_job_non_ancora_supportato(tmp_path: Path):
-    result = execute(_job(JobKind.VERIFICATION), FakeMetrology(_context()), _settings(tmp_path))
+    result = execute(_job(JobKind.CERT_FIT), FakeMetrology(_context()), _settings(tmp_path))
     assert result.error.code == "NOT_SUPPORTED"
+
+
+# --------------------------------------------------------------------------------------------
+# As-found con la funzione in vigore, as-left su punti indipendenti, campione dal certificato
+# --------------------------------------------------------------------------------------------
+
+
+def _run5_function() -> tuple[dict, list[list[float]]]:
+    """La funzione della run 5 nella forma del blocco ``calibration``, sulle potenze del grezzo."""
+    k = json.loads((RUN5 / "last_calibration.json").read_text(encoding="utf-8"))["coefficients"]
+    block = {"type": "cubic_lsb", "cubic_lsb": "c[0] + c[1] * x + c[2] * x**2 + c[3] * x**3", "input": ["x"], "c": [{"id": i, "value": k[f"a{i}"]} for i in range(4)]}
+    return block, k["cov_theta"]
+
+
+def _mario_points() -> dict[float, dict]:
+    points = json.loads((RUN5 / "last_calibration.json").read_text(encoding="utf-8"))["calibration_points"]
+    return {p["t_nominal"]: p for p in points}
+
+
+def _with_as_left(context: dict, setpoints: tuple[float, ...]) -> dict:
+    """Gradini AS_LEFT con gli stessi dati dei gradini as-found agli stessi setpoint."""
+    found = [s for s in context["steps"] if s["setpoint"] in setpoints]
+    left = [{**s, "phase": "AS_LEFT", "stepIndex": i} for i, s in enumerate(found)]
+    return {**context, "steps": context["steps"] + left}
+
+
+def test_verification_con_la_funzione_nuova_ridà_i_residui_di_mario(tmp_path: Path):
+    """L'as-left sugli stessi dati del fit, con la funzione del fit, e' il residuo di Mario:
+    e' la prova che statistiche dei gradini ed errori del motore sono quelli della pipeline."""
+    block, covariance = _run5_function()
+    context = _with_as_left(_context(), (-10.0, 30.0))
+    context["items"][0]["latestFit"] = {"decision": "ADJUST", "function": block, "covariance": covariance, "calibratedMin": -20.0, "calibratedMax": 100.0}
+    result = execute(_job(JobKind.VERIFICATION), FakeMetrology(context), _settings(tmp_path))
+
+    assert result.status == JobStatus.DONE, result.error
+    item = result.items[0]
+    assert item.adjustment_applied is True
+    assert {p.phase.value for p in item.points} == {"AS_LEFT"}
+    mario = _mario_points()
+    for p in item.points:
+        assert p.error == pytest.approx(mario[p.nominal]["M_e_post"], rel=1e-6)
+        assert p.reference_value == pytest.approx(mario[p.nominal]["T_ref"], rel=1e-12)
+        # Mario conta la risoluzione del campione come 0,001/√12, il motore usa quella del
+        # modello del campione (0,01): l'incertezza e' di poco piu' grande, mai piu' piccola.
+        assert mario[p.nominal]["U_exp"] <= p.expanded_u <= 1.01 * mario[p.nominal]["U_exp"]
+    # Errori fino a 1,5 °C contro una tolleranza di 0,6: l'as-left non e' conforme.
+    assert item.conformity[0].verdict == Verdict.NON_CONFORM
+    assert item.suggested_decision == SuggestedDecision.INVESTIGATE
+
+
+def test_verification_senza_decisione_si_ferma(tmp_path: Path):
+    context = _with_as_left(_context(), (-10.0,))
+    result = execute(_job(JobKind.VERIFICATION), FakeMetrology(context), _settings(tmp_path))
+    assert result.error.code == "NO_DECISION"
+
+
+def test_verification_senza_regolazione_verifica_la_funzione_in_vigore(tmp_path: Path):
+    block, covariance = _run5_function()
+    context = _with_as_left(_context(), (30.0,))
+    context["items"][0]["currentCertificate"] = {"id": 5, "number": "LAB-2026-0001", "revision": 1, "function": block, "covariance": covariance}
+    context["items"][0]["latestFit"] = {"decision": "NO_ADJUSTMENT", "function": {"type": "linear_lsb", "linear_lsb": "c[0] + c[1] * x", "input": ["x"], "c": [{"id": 0, "value": 0}, {"id": 1, "value": 1}]}}
+    result = execute(_job(JobKind.VERIFICATION), FakeMetrology(context), _settings(tmp_path))
+
+    assert result.status == JobStatus.DONE, result.error
+    item = result.items[0]
+    assert item.adjustment_applied is False
+    assert "LAB-2026-0001" in item.budget["verifiedFunction"]
+    assert item.points[0].error == pytest.approx(_mario_points()[30.0]["M_e_post"], rel=1e-6)
+
+
+def test_session_fit_calcola_l_as_found_con_la_funzione_in_vigore(tmp_path: Path):
+    block, covariance = _run5_function()
+    context = _context()
+    context["items"][0]["currentCertificate"] = {"id": 5, "number": "LAB-2026-0001", "revision": 1, "function": block, "covariance": covariance}
+    result = execute(_job(JobKind.SESSION_FIT), FakeMetrology(context), _settings(tmp_path))
+
+    assert result.status == JobStatus.DONE, result.error
+    item = result.items[0]
+    assert "LAB-2026-0001" in item.budget["asFoundFrom"]
+    mario = _mario_points()
+    assert [p.error for p in item.points] == pytest.approx([mario[p.nominal]["M_e_post"] for p in item.points], rel=1e-6)
+    assert item.suggested_decision == SuggestedDecision.ADJUST
+
+
+def _reference_certificate(valid_until: str = "2027-12-31T00:00:00Z", correction: float = 0.1) -> dict:
+    return {
+        "id": 9,
+        "number": "LAT-999-123",
+        "revision": 1,
+        "issuer": "Laboratorio accreditato",
+        "validUntil": valid_until,
+        "points": [
+            {"phase": "AS_LEFT", "pointIndex": 0, "indicatedValue": -30.0, "correction": correction, "expandedU": 0.02, "k": 2.0},
+            {"phase": "AS_LEFT", "pointIndex": 1, "indicatedValue": 110.0, "correction": correction, "expandedU": 0.04, "k": 2.0},
+        ],
+    }
+
+
+def test_il_fit_usa_le_correzioni_del_certificato_del_campione(tmp_path: Path):
+    """Una correzione costante di +0,1 sul campione sposta la funzione di +0,1 (minimi quadrati
+    lineari nei coefficienti), e l'incertezza del campione e' quella del certificato."""
+    plain = execute(_job(JobKind.SESSION_FIT), FakeMetrology(_context()), _settings(tmp_path)).items[0]
+    context = _context()
+    context["referenceCertificate"] = _reference_certificate()
+    corrected = execute(_job(JobKind.SESSION_FIT), FakeMetrology(context), _settings(tmp_path))
+
+    assert corrected.status == JobStatus.DONE, corrected.error
+    item = corrected.items[0]
+    for d in (5000.0, 30000.0, 55000.0):
+        shifted = evaluate(item.function.formula, d, [c.value for c in item.function.c])
+        original = evaluate(plain.function.formula, d, [c.value for c in plain.function.c])
+        assert shifted - original == pytest.approx(0.1, abs=1e-9)
+    reference = item.budget["referenceStandard"]
+    assert reference["fromCertificate"] is True
+    assert reference["certificate"]["number"] == "LAT-999-123"
+    assert reference["uReferenceForFit"] == pytest.approx(0.02), "il massimo di U/k dei punti che racchiudono le letture"
+
+
+def test_un_campione_scaduto_ferma_il_fit(tmp_path: Path):
+    context = _context()
+    context["referenceCertificate"] = _reference_certificate(valid_until="2026-01-01T00:00:00Z")
+    result = execute(_job(JobKind.SESSION_FIT), FakeMetrology(context), _settings(tmp_path))
+    assert result.error.code == "REFERENCE_EXPIRED"
 
 
 def test_documents_carica_dcc_e_pdf_a_nome_del_proprietario(tmp_path: Path):
@@ -169,6 +295,14 @@ def test_documents_carica_dcc_e_pdf_a_nome_del_proprietario(tmp_path: Path):
     assert {d.kind.value for d in result.documents} == {"DCC_XML", "CERTIFICATE_PDF"}
     assert all(d.calibrated_item_id == ITEM["id"] for d in result.documents)
     assert all(owner == "cliente" for _, _, owner, _ in metrology.uploads)
+
+
+def test_documents_niente_per_chi_va_riparato(tmp_path: Path):
+    context = _context()
+    context["items"][0]["latestFit"] = {"decision": "REPAIR"}
+    metrology = FakeMetrology(context)
+    result = execute(_job(JobKind.DOCUMENTS), metrology, _settings(tmp_path))
+    assert result.status == JobStatus.DONE and result.documents == [] and metrology.uploads == []
 
 
 def test_un_job_illeggibile_si_scarta_senza_fermare_la_coda(tmp_path: Path):

@@ -832,6 +832,9 @@ def main() -> None:
         help="Maximum Acceptable Error for Check H (default: 0.30)")
     parser.add_argument("--pfa-threshold-pct", type=float, default=20.0,
         help="PFA threshold percentage for Check H (default: 20.0)")
+    # Passo 3.5 del piano metrologico: la procedura dice quante letture per blocco (readings.blockSize).
+    parser.add_argument("--sample-size", type=int, default=20,
+        help="Readings per block in the per-step statistics (default: 20)")
     parser.add_argument("--pfa-u-std-mode", type=str, default="combined",
         choices=["combined", "type_a"],
         help="Uncertainty mode for PFA computation: combined (u_exp/k) or type_a (uA_sensor) (default: combined)")
@@ -927,7 +930,7 @@ def main() -> None:
     if args.verbose and _formula_str:
         print(f"evaluationFormula: {_formula_str}")
 
-    sample_size = 20
+    sample_size = max(1, int(args.sample_size))
     lsb_scale   = {"minPhysVal": lsb_min, "maxPhysVal": lsb_max}
 
     payload = json.loads(args.input.read_text(encoding="utf-8"))

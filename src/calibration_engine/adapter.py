@@ -48,18 +48,31 @@ class AdapterError(Exception):
         self.code = code
 
 
-def pipeline_input(context: dict[str, Any], item: dict[str, Any], phase: str = "AS_FOUND") -> dict[str, Any]:
+def item_steps(context: dict[str, Any], item: dict[str, Any], phase: str) -> list[dict[str, Any]]:
+    """I gradini di una fase per un esemplare, in ordine."""
+    index = item["sensorIndex"]
+    return sorted(
+        (s for s in context.get("steps") or [] if s["sensorIndex"] == index and s["phase"] == phase),
+        key=lambda s: s["stepIndex"],
+    )
+
+
+def pipeline_input(
+    context: dict[str, Any],
+    item: dict[str, Any],
+    phase: str = "AS_FOUND",
+    steps: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """I gradini di un esemplare nel formato che ``analisi_calib_data.py`` legge con ``--input``.
 
     I campioni del sensore di un gradino si dividono in parti uguali, una per lettura del
     riferimento: e' la regola di Mario, perche' il Raspberry campiona il sensore a blocchi
-    durante ogni lettura del riferimento.
+    durante ogni lettura del riferimento. ``steps`` sono i gradini gia' preparati dal motore
+    (letture del campione corrette, gradini instabili esclusi, salita e discesa unite); senza,
+    quelli della sessione cosi' come sono.
     """
     index = item["sensorIndex"]
-    steps = sorted(
-        (s for s in context.get("steps") or [] if s["sensorIndex"] == index and s["phase"] == phase),
-        key=lambda s: s["stepIndex"],
-    )
+    steps = item_steps(context, item, phase) if steps is None else steps
     if not steps:
         raise AdapterError("NO_STEPS", f"nessun gradino {phase} per il sensore {index}")
 
@@ -164,38 +177,42 @@ def item_result(
     # quindi l'unita' della grandezza, sia nella forma centrata sia sulle potenze di D.
     c = [Coefficient(id=i, value=v, dsi=dsi) for i, v in enumerate(values)]
 
+    # As-found della pipeline: errori con i «vecchi coefficienti» di Mario. E' il ripiego
+    # quando la funzione in vigore sul server non e' valutabile sui grezzi della sessione; di
+    # norma jobs.py li sostituisce con quelli calcolati dalla funzione in vigore (points.py).
+    # I residui del fit (M_e_post) non sono un as-left: stanno nel budget [S §6.2].
     points: list[CalibrationPoint] = []
+    residuals: list[dict[str, Any]] = []
     for i, p in enumerate(result.get("calibration_points") or []):
         reference = float(p["T_ref"])
-        u = p.get("U_exp")
-        for phase, key in ((Phase.AS_FOUND, "M_e_pre"), (Phase.AS_LEFT, "M_e_post")):
-            error = p.get(key)
-            if error is None:
-                continue
+        error = p.get("M_e_pre")
+        if error is not None:
             points.append(
                 CalibrationPoint(
-                    phase=phase,
+                    phase=Phase.AS_FOUND,
                     point_index=i,
                     nominal=p.get("t_nominal"),
                     reference_value=reference,
                     indicated_value=reference + float(error),
                     error=float(error),
-                    expanded_u=u,
+                    correction=-float(error),
+                    expanded_u=p.get("U_exp"),
                     k=2.0,
                     dsi=dsi,
                 )
             )
+        if p.get("M_e_post") is not None:
+            residuals.append({"pointIndex": i, "nominal": p.get("t_nominal"), "reference": reference, "residual": float(p["M_e_post"])})
 
     nominals = [float(t) for t in result.get("temp_nominali") or [] if t is not None]
     calibrated_range = CalibratedRange(min=min(nominals), max=max(nominals), dsi=dsi) if nominals else None
 
     budget = {
         "fitQuality": result.get("fit_quality"),
+        "fitResiduals": residuals,
         "reference": result.get("reference"),
         "sensor": {k: v for k, v in (result.get("sensor") or {}).items() if not isinstance(v, list)},
-        # L'as-left della pipeline di oggi si calcola sugli stessi punti del fit: lo si dice,
-        # finche' il job VERIFICATION non lo misura su punti indipendenti (passo 3.5).
-        "asLeftOnFitPoints": True,
+        "asFoundFrom": "pipeline",
     }
 
     conformity_results: list[ConformityResult] = []
