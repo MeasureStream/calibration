@@ -101,6 +101,18 @@ def _health() -> int:
     return 0 if healthy(get_settings()) else 1
 
 
+def _simulate(args: argparse.Namespace) -> int:
+    from pathlib import Path
+
+    from calibration_engine.settings import get_settings
+    from calibration_engine.simulate import default_file, load, rewrite, send
+
+    path = Path(args.file) if args.file else default_file()
+    messages = [rewrite(m, args.session, args.phase, args.sensor_index) for m in load(path)]
+    print(f"{len(messages)} gradini da {path} verso la sessione {args.session}")
+    return send(args.bootstrap or get_settings().kafka_bootstrap_servers, messages)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="calibration-engine", description="Motore di taratura di MeasureStream")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -110,8 +122,16 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("whoami", help="si autentica e chiede a metrology-service chi e'")
     sub.add_parser("consume", help="consuma i job di taratura da Kafka")
     sub.add_parser("health", help="healthcheck: il consumer e' vivo?")
+    simulate = sub.add_parser("simulate-session", help="pubblica gradini registrati per una sessione aperta via REST")
+    simulate.add_argument("--session", type=int, required=True, help="id della sessione: e' il calib_id")
+    simulate.add_argument("--phase", choices=["AS_FOUND", "AS_LEFT"], default=None)
+    simulate.add_argument("--sensor-index", type=int, default=None)
+    simulate.add_argument("--file", default=None, help="gradini registrati (predefinito: one_measure.json di Mario)")
+    simulate.add_argument("--bootstrap", default=None, help="Kafka (predefinito: ENGINE_KAFKA_BOOTSTRAP_SERVERS)")
     args = parser.parse_args(argv)
 
+    if args.command == "simulate-session":
+        return _simulate(args)
     if args.command == "consume":
         return _consume()
     if args.command == "health":

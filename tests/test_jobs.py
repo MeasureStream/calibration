@@ -171,3 +171,14 @@ def test_healthcheck(tmp_path: Path):
 def test_adattatore_rifiuta_un_modello_senza_formula():
     with pytest.raises(AdapterError):
         item_result({"model": "steinhart", "coefficients": {}}, None, ITEM, None, None)
+
+
+def test_simulate_session_indirizza_i_gradini_registrati_a_una_sessione_vera():
+    from calibration_engine.simulate import default_file, load, rewrite
+
+    steps = [rewrite(m, 42, "AS_FOUND", 0) for m in load(default_file())]
+    assert {s["calib_id"] for s in steps} == {"42"}
+    assert all(s["phase"] == "AS_FOUND" and s["sensor_index"] == 0 for s in steps)
+    first = steps[0]
+    assert isinstance(first["step_summary"], list) and isinstance(first["ref_readings"], list)
+    assert isinstance(first["target"], float) and isinstance(first["step_index"], int)
