@@ -91,5 +91,35 @@ class MetrologyClient:
         response.raise_for_status()
         return response.json()
 
+    def job_context(self, job_id: str) -> dict[str, Any]:
+        """Tutto cio' che serve a un job: sessione, esemplari, gradini, campione e suo certificato."""
+        response = self._http.get(f"/API/metrology/engine/jobs/{job_id}/context")
+        response.raise_for_status()
+        return response.json()
+
+    def template(self, kind: str, template_id: int, major: int) -> dict[str, Any] | None:
+        """Il documento di un template dal registro di sensor-manager (attraverso il gateway)."""
+        response = self._http.get(f"/API/templates/{kind}/{template_id}/{major}")
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        return response.json().get("content")
+
+    def template_version(self, kind: str, template_id: int, version: str) -> dict[str, Any] | None:
+        response = self._http.get(f"/API/templates/{kind}/{template_id}/{version}")
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        return response.json().get("content")
+
+    def upload_document(self, content: bytes, filename: str, mime: str, kind: str, owner_sub: str | None) -> dict[str, Any]:
+        """Carica un documento prodotto dal motore; risponde con id e impronta."""
+        data = {"kind": kind}
+        if owner_sub:
+            data["ownerSub"] = owner_sub
+        response = self._http.post("/API/metrology/documents", files={"file": (filename, content, mime)}, data=data)
+        response.raise_for_status()
+        return response.json()
+
     def close(self) -> None:
         self._http.close()

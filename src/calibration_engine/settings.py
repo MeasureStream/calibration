@@ -37,6 +37,11 @@ class EngineSettings(BaseSettings):
 
     # --- Esecuzione ---
     job_timeout_seconds: int = 600
+    #: Il consumer tocca questo file a ogni giro: l'healthcheck di Docker ne controlla l'eta'.
+    heartbeat_file: str = "/tmp/calibration-engine.heartbeat"
+    heartbeat_max_age_seconds: int = 180
+    #: L'XSD del DCC (PTB 3.3.0). Se manca, il DCC si produce lo stesso ma si dichiara non validato.
+    dcc_xsd_path: str | None = None
     http_timeout_seconds: float = 30.0
 
     # Versione del motore citata nel DCC: la imposta l'immagine Docker (ENGINE_GIT_SHA).

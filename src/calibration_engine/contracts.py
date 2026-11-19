@@ -15,7 +15,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 from pydantic.alias_generators import to_camel
 
 #: Versione del contratto. Un campo nuovo e' facoltativo e non la cambia.
@@ -210,6 +210,16 @@ class DocumentRef(_Message):
     document_id: int
     kind: DocumentKind
     sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    #: L'esemplare a cui appartiene, quando la sessione ne tara piu' d'uno. Assente se vale per tutti.
+    calibrated_item_id: int | None = None
+
+    @model_serializer(mode="wrap")
+    def _senza_esemplare_nullo(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        for key in ("calibratedItemId", "calibrated_item_id"):
+            if key in data and data[key] is None:
+                del data[key]
+        return data
 
 
 class JobError(_Message):

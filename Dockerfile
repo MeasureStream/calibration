@@ -35,5 +35,8 @@ ENV ENGINE_GIT_SHA=${ENGINE_GIT_SHA}
 RUN groupadd --system --gid 10001 engine && useradd --system --uid 10001 --gid engine --no-create-home engine
 USER 10001:10001
 
-# Nella fase 0 il motore non consuma ancora job: il comando predefinito verifica l'immagine.
-CMD ["calibration-engine", "check"]
+# Il consumer tocca un file a ogni giro di poll: se smette (bloccato o caduto) il container
+# risulta malato. start-period lascia il tempo di ottenere il token e collegarsi a Kafka.
+HEALTHCHECK --interval=60s --timeout=10s --start-period=120s --retries=3 CMD ["calibration-engine", "health"]
+
+CMD ["calibration-engine", "consume"]
