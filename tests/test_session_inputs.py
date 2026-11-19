@@ -202,3 +202,55 @@ def test_conforme_zona_di_guardia_non_conforme():
     verdict, _ = conformity([_point(0, 0.35, 0.01)], sensor, (201, "2.2.0"), 0.02)
     assert verdict.verdict == Verdict.NON_CONFORM
     assert conformity([_point(0, 0.1, 0.01)], {}, (201, "2.2.0"), 0.02) == (None, [])
+
+
+# --------------------------------------------------------------------------------------------
+# CERT_FIT: la funzione dai punti di un certificato esterno (passo 5.3)
+# --------------------------------------------------------------------------------------------
+
+from calibration_engine.certfit import CertFitError, certificate_pairs, fit_correction, function_block, inline  # noqa: E402
+from calibration_engine.formula import evaluate  # noqa: E402
+
+NOMINAL = {"type": "linear_201", "linear_201": "c[0] + c[1] * x", "input": ["x"], "c": [{"id": 0, "value": -40.0}, {"id": 1, "value": 0.01}]}
+
+
+def _lab_points(references: list[float], u: float | None = 0.05) -> list[dict]:
+    """Uno strumento che legge 0,3 + 1 % in piu' del vero: indicazione = r + 0,3 + 0,01·r."""
+    return [
+        {"phase": "AS_LEFT", "referenceValue": r, "indicatedValue": r + 0.3 + 0.01 * r, "expandedU": None if u is None else 2 * u, "k": 2.0}
+        for r in references
+    ]
+
+
+def test_la_formula_nominale_con_i_coefficienti_scritti():
+    assert inline("c[0] + c[1] * x", [-40.0, 0.01]) == "(-40.0) + (0.01) * x"
+    with pytest.raises(CertFitError):
+        inline("c[0] + c[2] * x", [1.0, 2.0])
+
+
+def test_la_correzione_sopra_la_formula_nominale_restituisce_il_riferimento():
+    y, r, u = certificate_pairs(_lab_points([-20.0, 0.0, 20.0, 40.0]))
+    c, covariance, residuals = fit_correction(y, r, u, 1)
+    assert np.max(np.abs(residuals)) < 1e-12, "il difetto e' lineare: la correzione lineare lo toglie tutto"
+    block = function_block(NOMINAL, c, r"\degreeCelsius")
+    formula = block[block["type"]]
+    values = [e["value"] for e in block["c"]]
+    for reference in (-20.0, 10.0, 40.0):
+        indicated = reference + 0.3 + 0.01 * reference
+        raw = (indicated + 40.0) / 0.01  # il grezzo che la formula nominale porta all'indicazione
+        assert evaluate(formula, raw, values) == pytest.approx(reference, abs=1e-9)
+    assert np.all(np.isfinite(covariance)) and covariance.shape == (2, 2)
+    assert covariance[0][0] > 0
+
+
+def test_senza_incertezze_e_con_due_punti_la_covarianza_non_si_inventa():
+    y, r, u = certificate_pairs(_lab_points([0.0, 40.0], u=None))
+    assert u is None
+    _, covariance, _ = fit_correction(y, r, u, 1)
+    assert np.all(np.isnan(covariance))
+
+
+def test_un_punto_solo_non_basta():
+    with pytest.raises(CertFitError) as e:
+        certificate_pairs(_lab_points([20.0]))
+    assert e.value.code == "TOO_FEW_POINTS"

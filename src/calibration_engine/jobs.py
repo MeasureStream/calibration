@@ -31,8 +31,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
+import numpy as np
+
 from calibration_engine import __version__
 from calibration_engine.adapter import AdapterError, item_result, item_steps, pipeline_input, tolerance_of
+from calibration_engine.certfit import CertFitError, certificate_pairs, degree_for, fit_correction, function_block
 from calibration_engine.dcc import enrich
 from calibration_engine.contracts import (
     CalibratedRange,
@@ -98,9 +101,11 @@ def execute(job: CalibrationJob, client: Metrology, settings: EngineSettings) ->
         elif job.kind == JobKind.DOCUMENTS:
             for item in _session_items(context):
                 documents.extend(_documents(job, context, item, client, settings))
+        elif job.kind == JobKind.CERT_FIT:
+            items = [_cert_fit(context, item, client) for item in _session_items(context)]
         else:
-            raise JobFailure("NOT_SUPPORTED", f"il motore non esegue ancora i job {job.kind} (passo 5.3)")
-    except (JobFailure, AdapterError, ReferenceStandardError) as exc:
+            raise JobFailure("NOT_SUPPORTED", f"il motore non esegue i job {job.kind}")
+    except (JobFailure, AdapterError, ReferenceStandardError, CertFitError) as exc:
         error = JobError(code=exc.code, message=str(exc))
     except subprocess.TimeoutExpired:
         error = JobError(code="TIMEOUT", message=f"la pipeline ha superato {settings.job_timeout_seconds} s ed e' stata terminata")
@@ -448,6 +453,9 @@ def _clean(block: dict[str, Any] | None) -> dict[str, Any] | None:
     if not block or not block.get("type") or block.get("type") == "none":
         return None
     kind = block["type"]
+    if not isinstance(block.get(kind), str):
+        # Un tipo senza la sua formula (i template storici con i soli coefficienti) non e' una funzione.
+        return None
     declared = block.get("c")
     if not isinstance(declared, list) or not declared:
         declared = [{"id": i, "value": v} for i, v in enumerate(block.get("coefficients") or [])]
@@ -519,6 +527,45 @@ def _verify(context: dict[str, Any], item: dict[str, Any], client: Metrology) ->
         conformity=[verdict] if verdict else [],
         # Un as-left fuori specifica dopo la decisione e' da capire, non da regolare di nuovo.
         suggested_decision=SuggestedDecision.INVESTIGATE if verdict and verdict.verdict != Verdict.CONFORM else SuggestedDecision.NONE,
+    )
+
+
+# --------------------------------------------------------------------------------------------
+# CERT_FIT
+# --------------------------------------------------------------------------------------------
+
+
+def _cert_fit(context: dict[str, Any], item: dict[str, Any], client: Metrology) -> ItemResult:
+    """La funzione dell'esemplare dai punti di un certificato esterno (vedi certfit.py)."""
+    certificate = context.get("certificate") or {}
+    sensor = _sensor_template(item, client)
+    nominal = _clean(sensor.get("calibration"))
+    if nominal is None:
+        raise JobFailure("NO_NOMINAL", f"il template di {item.get('modelName')} non ha una formula nominale")
+    y, r, u = certificate_pairs(certificate.get("points") or [])
+    degree = degree_for(len(y))
+    c, covariance, residuals = fit_correction(y, r, u, degree)
+    dsi = sensor.get("unit")
+    block = function_block(nominal, c, dsi)
+    finite = bool(np.all(np.isfinite(covariance)))
+    return ItemResult(
+        calibrated_item_id=item["id"],
+        mu_extended_id=item["muExtendedId"],
+        sensor_index=item["sensorIndex"],
+        function=CalibrationFunction.model_validate(block),
+        covariance=covariance.tolist() if finite else None,
+        calibrated_range=CalibratedRange(min=float(r.min()), max=float(r.max()), dsi=dsi),
+        budget={
+            "certFit": {
+                "certificate": {k: certificate.get(k) for k in ("id", "number", "revision", "issuer")},
+                "degree": degree,
+                "points": len(y),
+                "weighted": u is not None,
+                "residuals": [float(v) for v in residuals],
+                "nominal": nominal.get("type"),
+            },
+            "warnings": [] if finite else ["covarianza non stimabile: punti senza incertezza e senza gradi di liberta'"],
+        },
     )
 
 

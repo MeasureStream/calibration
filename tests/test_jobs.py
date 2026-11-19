@@ -162,9 +162,11 @@ def test_una_sessione_senza_gradini_e_un_errore_leggibile(tmp_path: Path):
     assert result.error.code == "NO_STEPS"
 
 
-def test_un_tipo_di_job_non_ancora_supportato(tmp_path: Path):
+def test_cert_fit_senza_formula_nominale_e_un_errore_leggibile(tmp_path: Path):
+    """Tutti e quattro i tipi di job sono supportati dal passo 5.3: un CERT_FIT su un modello senza
+    formula nominale (il sensore delle run di Mario) si ferma con un codice che si capisce."""
     result = execute(_job(JobKind.CERT_FIT), FakeMetrology(_context()), _settings(tmp_path))
-    assert result.error.code == "NOT_SUPPORTED"
+    assert result.error.code == "NO_NOMINAL"
 
 
 # --------------------------------------------------------------------------------------------
@@ -369,3 +371,25 @@ def test_il_dcc_cita_procedura_motore_e_campione(tmp_path: Path):
     assert len(root.findall("dcc:administrativeData/dcc:items/dcc:item", ns)) == 1, "il campione non e' un oggetto tarato"
     statements = " ".join(c.text or "" for c in root.findall(".//dcc:statement/dcc:declaration/dcc:content", ns))
     assert f"f(x) = {block['cubic_lsb']}" in statements, "la funzione come la applica il server"
+
+
+def test_cert_fit_ricava_la_funzione_dai_punti_del_certificato(tmp_path: Path):
+    """Il job CERT_FIT con il contesto che metrology-service da' per un certificato esterno."""
+    nominal = {"type": "linear_201", "linear_201": "c[0] + c[1] * x", "input": ["x"], "c": [{"id": 0, "value": -40.0}, {"id": 1, "value": 0.01}]}
+    points = [
+        {"phase": "AS_LEFT", "pointIndex": i, "referenceValue": r, "indicatedValue": r + 0.3, "expandedU": 0.1, "k": 2.0}
+        for i, r in enumerate((-20.0, 0.0, 20.0))
+    ]
+    context = {"session": None, "steps": [], "certificate": {"id": 77, "number": "LAT-042-2026-0099", "revision": 1, "points": points},
+               "items": [{"item": ITEM, "currentCertificate": None}]}
+    metrology = FakeMetrology(context)
+    metrology.template = lambda kind, template_id, major: {"templateId": 201, "unit": r"\degreeCelsius", "calibration": nominal}  # type: ignore[method-assign]
+    result = execute(_job(JobKind.CERT_FIT), metrology, _settings(tmp_path))
+
+    assert result.status == JobStatus.DONE, result.error
+    item = result.items[0]
+    values = [c.value for c in item.function.c]
+    assert values == pytest.approx([-0.3, 0.0], abs=1e-9), "l'indicazione era 0,3 in piu' del vero"
+    assert evaluate(item.function.formula, 4000.0, values) == pytest.approx(-0.3, abs=1e-9)
+    assert item.calibrated_range.min == -20.0 and item.calibrated_range.max == 20.0
+    assert item.budget["certFit"]["certificate"]["number"] == "LAT-042-2026-0099"
