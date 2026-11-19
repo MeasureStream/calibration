@@ -15,8 +15,10 @@ Le scelte, che valgono come regola del laboratorio e stanno anche in IMPLEMENTAZ
   scritta nel risultato, dove il tecnico e l'approvatore la vedono;
 - **punti**: un punto della procedura senza gradini e' una deviazione dal metodo, non un errore
   del job: il fit si puo' fare lo stesso, ma il certificato deve dirlo;
-- **letture**: meno letture di ``blocks`` (campione) o di ``blockSize × blocks`` (sensore) e'
-  un avviso;
+- **letture**: la pipeline fa la media a blocchi di ``blockSize`` letture del campione, ognuna
+  con il suo frame di campioni del sensore, e ne vuole ``blocks``: meno di ``blockSize × blocks``
+  letture del campione, o meno campioni del sensore che letture, e' un avviso (sotto un blocco
+  intero la pipeline scarta il gradino);
 - **isteresi**: con ``hysteresis: true`` ogni punto va misurato in salita e in discesa. I due
   gradini si uniscono per il fit, e la loro differenza diventa un contributo d'incertezza
   (rettangolare di ampiezza piena h, quindi u = h/√12), calcolato dopo il fit;
@@ -186,13 +188,16 @@ def check(procedure: dict[str, Any] | None, steps: list[dict[str, Any]], phase: 
 
     readings = procedure.get("readings") or {}
     blocks, block_size = readings.get("blocks"), readings.get("blockSize")
+    wanted = (blocks or 1) * (block_size or 1) if (blocks or block_size) else None
     for step in ordered:
         n_ref = len(step.get("referenceReadings") or [])
         n_raw = len(step.get("sensorSamples") or [])
-        if blocks and n_ref < blocks:
-            report.warnings.append(f"gradino {step['stepIndex']}: {n_ref} letture del campione, la procedura ne chiede {blocks}")
-        if blocks and block_size and n_raw < blocks * block_size:
-            report.warnings.append(f"gradino {step['stepIndex']}: {n_raw} campioni del sensore, la procedura ne chiede {blocks * block_size}")
+        if wanted and n_ref < wanted:
+            report.warnings.append(
+                f"gradino {step['stepIndex']}: {n_ref} letture del campione, la procedura ne chiede {wanted} ({blocks} blocchi da {block_size})"
+            )
+        if n_ref and n_raw < n_ref:
+            report.warnings.append(f"gradino {step['stepIndex']}: {n_raw} campioni del sensore per {n_ref} letture: ne serve almeno uno per lettura")
     return report
 
 
